@@ -56,3 +56,7 @@ python3 -m http.server 8080
 ```
 
 open http://localhost:8080 in your browser
+
+### Data Processor
+
+Data processor takes CSV exports from various financial institutes and transforms the raw data into the standard schema expected by the Spend Analyzer

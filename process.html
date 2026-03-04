@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Transaction Processor · Spend Tracker</title>
+  <style>
+    :root {
+      --bg:      #0d1117; --surface: #161b27; --surface2: #1e2436;
+      --border:  #2e3250; --text:    #e8eaf6; --muted:    #8892b0;
+      --accent:  #7c83f5; --green:   #4caf91; --red:      #e05c5c;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; font-size: 14px; min-height: 100vh; }
+
+    /* ── HEADER ── */
+    header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 28px; display: flex; align-items: center; gap: 16px; }
+    header a { color: var(--muted); text-decoration: none; font-size: 0.82rem; }
+    header a:hover { color: var(--accent); }
+    header h1 { font-size: 1.05rem; font-weight: 700; }
+    .sep { color: var(--border); }
+
+    /* ── LAYOUT ── */
+    main { max-width: 1100px; margin: 0 auto; padding: 28px 24px; display: flex; flex-direction: column; gap: 24px; }
+    .section { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 22px 24px; display: flex; flex-direction: column; gap: 16px; }
+    .section h2 { font-size: 0.9rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+
+    /* ── BANK CARDS ── */
+    .bank-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+    .bank-card { position: relative; }
+    .bank-card input[type=radio] { position: absolute; opacity: 0; width: 0; height: 0; }
+    .bank-card label {
+      display: block; padding: 12px 16px; border-radius: 9px; border: 1.5px solid var(--border);
+      cursor: pointer; transition: border-color 0.15s, background 0.15s;
+      background: var(--surface2);
+    }
+    .bank-card label .bank-name { font-weight: 600; font-size: 0.88rem; }
+    .bank-card label .bank-sub  { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
+    .bank-card input:checked + label { border-color: var(--accent); background: #7c83f510; }
+    .bank-card label:hover { border-color: var(--muted); }
+
+    /* ── GLOBAL FIELDS ── */
+    .fields-row { display: flex; gap: 14px; flex-wrap: wrap; }
+    .field-group { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 180px; }
+    .field-group label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+    .field-group input, .field-group select {
+      background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+      padding: 8px 12px; border-radius: 8px; font-size: 0.88rem; outline: none;
+    }
+    .field-group input:focus, .field-group select:focus { border-color: var(--accent); }
+
+    /* ── PASTE AREA ── */
+    .paste-wrap { position: relative; }
+    #csv-input {
+      width: 100%; height: 140px; background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 9px; color: var(--text); padding: 12px; font-family: 'Courier New', monospace;
+      font-size: 0.8rem; resize: vertical; outline: none; line-height: 1.5;
+    }
+    #csv-input:focus { border-color: var(--accent); }
+    #csv-input::placeholder { color: var(--muted); }
+    .paste-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .auto-detect-badge { font-size: 0.75rem; color: var(--green); background: #4caf9118; border: 1px solid #4caf9140; border-radius: 20px; padding: 3px 10px; display: none; }
+
+    /* ── BUTTONS ── */
+    .btn { padding: 9px 20px; border-radius: 8px; border: none; font-size: 0.88rem; font-weight: 600; cursor: pointer; transition: opacity 0.15s; }
+    .btn:hover { opacity: 0.85; }
+    .btn-primary { background: var(--accent); color: white; }
+    .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+    .btn-green { background: var(--green); color: white; }
+    .btn-sm { padding: 5px 12px; font-size: 0.78rem; }
+    .btn-danger { background: transparent; border: none; color: var(--muted); font-size: 1rem; cursor: pointer; padding: 4px 8px; border-radius: 4px; }
+    .btn-danger:hover { color: var(--red); }
+    input[type=file] { display: none; }
+
+    /* ── SUMMARY BAR ── */
+    .summary-bar { display: flex; align-items: center; gap: 20px; padding: 10px 14px; background: var(--surface2); border-radius: 8px; flex-wrap: wrap; }
+    .summary-bar .stat { display: flex; flex-direction: column; gap: 2px; }
+    .summary-bar .stat-label { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+    .summary-bar .stat-value { font-size: 0.95rem; font-weight: 700; }
+    .positive { color: var(--green); }
+    .negative { color: var(--red); }
+    .summary-bar .actions { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }
+
+    /* ── PREVIEW TABLE ── */
+    .table-wrap { overflow-x: auto; border-radius: 9px; border: 1px solid var(--border); }
+    table { width: 100%; border-collapse: collapse; font-size: 0.83rem; }
+    thead tr { background: var(--surface2); }
+    th { padding: 9px 10px; text-align: left; color: var(--muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap; border-bottom: 1px solid var(--border); }
+    tbody tr { border-bottom: 1px solid var(--border)22; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: var(--surface2)88; }
+    td { padding: 6px 8px; vertical-align: middle; }
+    td.row-num { color: var(--muted); font-size: 0.75rem; width: 36px; text-align: center; }
+    td.date-cell { white-space: nowrap; color: var(--muted); width: 100px; }
+    td.amount-cell { text-align: right; white-space: nowrap; width: 90px; font-family: monospace; }
+    [contenteditable] { outline: none; border-radius: 4px; padding: 2px 5px; min-width: 20px; display: inline-block; }
+    [contenteditable]:focus { background: var(--surface2); box-shadow: 0 0 0 1.5px var(--accent); }
+    td.amount-cell [contenteditable] { text-align: right; }
+    .error-row { background: #e05c5c10 !important; }
+    .error-row td.date-cell { color: var(--red); }
+
+    /* ── TOAST ── */
+    #toast { position: fixed; bottom: 24px; right: 24px; background: var(--surface); border: 1px solid var(--border); color: var(--text); padding: 10px 18px; border-radius: 9px; font-size: 0.85rem; box-shadow: 0 8px 24px #00000066; opacity: 0; pointer-events: none; transition: opacity 0.2s; z-index: 999; }
+    #toast.show { opacity: 1; }
+
+
+    /* ── DRAG & DROP ── */
+    #csv-input.drag-over { border-color: var(--accent); background: #7c83f510; }
+
+    /* ── DATE RANGE PILL ── */
+    .date-range-pill {
+      display: inline-flex; align-items: center; gap: 0;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 8px; padding: 0; overflow: hidden;
+      transition: border-color 0.15s;
+    }
+    .date-range-pill:focus-within { border-color: var(--accent); }
+    .date-range-pill .pill-icon { padding: 0 10px; color: var(--muted); font-size: 0.9rem; pointer-events: none; }
+    .date-range-pill input[type=date] {
+      background: transparent; border: none; color: var(--text);
+      padding: 8px 6px; font-size: 0.88rem; outline: none;
+      cursor: pointer; width: 130px;
+    }
+    .date-range-pill input[type=date]::-webkit-calendar-picker-indicator { filter: invert(0.5); cursor: pointer; }
+    .date-range-pill .pill-sep {
+      color: var(--muted); font-size: 0.8rem; padding: 0 4px;
+      border-left: 1px solid var(--border); border-right: 1px solid var(--border);
+      align-self: stretch; display: flex; align-items: center;
+    }
+    .date-range-clear {
+      background: none; border: none; color: var(--muted); cursor: pointer;
+      padding: 0 10px; font-size: 0.85rem; align-self: stretch;
+      border-left: 1px solid var(--border); display: flex; align-items: center;
+    }
+    .date-range-clear:hover { color: var(--red); }
+    .toggle-label { display: flex; align-items: center; gap: 7px; font-size: 0.82rem; color: var(--muted); cursor: pointer; user-select: none; }
+    .toggle-label input[type=checkbox] { accent-color: var(--accent); width: 14px; height: 14px; cursor: pointer; }
+    .toggle-label:hover { color: var(--text); }
+    #step-preview { display: none; }
+    .parse-error { color: var(--red); font-size: 0.82rem; display: none; padding: 8px 12px; background: #e05c5c18; border-radius: 6px; border: 1px solid #e05c5c44; }
+  </style>
+</head>
+<body>
+
+<header>
+  <a href="./index.html">&#x2190; Dashboard</a>
+  <span class="sep">|</span>
+  <h1>&#x1F4C4; Transaction Processor</h1>
+</header>
+
+<main>
+
+  <!-- ── STEP 1: SOURCE ─────────────────────────────────────────── -->
+  <div class="section" id="step-input">
+    <h2>1 · Select Bank / Card</h2>
+    <div class="bank-grid">
+      <div class="bank-card">
+        <input type="radio" name="bank" id="b-capital-one" value="capital_one" />
+        <label for="b-capital-one">
+          <div class="bank-name">Capital One</div>
+          <div class="bank-sub">Credit Card</div>
+        </label>
+      </div>
+      <div class="bank-card">
+        <input type="radio" name="bank" id="b-chase-bank" value="chase_bank" />
+        <label for="b-chase-bank">
+          <div class="bank-name">Chase</div>
+          <div class="bank-sub">Bank / Checking Account</div>
+        </label>
+      </div>
+      <div class="bank-card">
+        <input type="radio" name="bank" id="b-chase-card" value="chase_card" />
+        <label for="b-chase-card">
+          <div class="bank-name">Chase</div>
+          <div class="bank-sub">Credit Card</div>
+        </label>
+      </div>
+      <div class="bank-card">
+        <input type="radio" name="bank" id="b-amex" value="amex" />
+        <label for="b-amex">
+          <div class="bank-name">American Express</div>
+          <div class="bank-sub">Credit Card</div>
+        </label>
+      </div>
+      <div class="bank-card">
+        <input type="radio" name="bank" id="b-citi-custom" value="citi_custom" />
+        <label for="b-citi-custom">
+          <div class="bank-name">Citi</div>
+          <div class="bank-sub">CustomCash Card</div>
+        </label>
+      </div>
+      <div class="bank-card">
+        <input type="radio" name="bank" id="b-citi-costco" value="citi_costco" />
+        <label for="b-citi-costco">
+          <div class="bank-name">Citi</div>
+          <div class="bank-sub">Costco Anywhere Card</div>
+        </label>
+      </div>
+    </div>
+
+    <h2 style="margin-top:4px">2 · Global Defaults <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted);font-size:0.78rem">(applied to all rows, editable per-row after parsing)</span></h2>
+    <div class="fields-row">
+      <div class="field-group">
+        <label for="global-account">Account Name</label>
+        <input type="text" id="global-account" placeholder="e.g. Capital One Quicksilver" />
+      </div>
+      <div class="field-group">
+        <label for="global-owner">Account Owner</label>
+        <input type="text" id="global-owner" placeholder="e.g. John" />
+      </div>
+      <div class="field-group">
+        <label>Date Range</label>
+        <div class="date-range-pill">
+          <span class="pill-icon">&#x1F4C5;</span>
+          <input type="date" id="date-from" title="From date" />
+          <span class="pill-sep">&#x2192;</span>
+          <input type="date" id="date-to" title="To date" />
+          <button class="date-range-clear" id="date-range-clear" title="Clear dates">&#x2715;</button>
+        </div>
+      </div>
+    </div>
+
+    <h2 style="margin-top:4px">3 · Paste CSV Export</h2>
+    <textarea id="csv-input" placeholder="Paste CSV data here, drag &amp; drop a file, or click Browse&#x2026;&#10;&#10;The header row must be included. Column order does not matter."></textarea>
+    <div class="parse-error" id="parse-error"></div>
+    <div class="paste-actions">
+      <button class="btn btn-primary" id="parse-btn">Parse Transactions</button>
+      <label class="btn btn-secondary" for="file-input">Browse File</label>
+      <input type="file" id="file-input" accept=".csv,.txt" />
+      <span class="auto-detect-badge" id="auto-detect-badge"></span>
+    </div>
+  </div>
+
+  <!-- ── STEP 2: PREVIEW ────────────────────────────────────────── -->
+  <div class="section" id="step-preview">
+    <h2>4 · Review &amp; Edit</h2>
+    <div class="summary-bar" id="summary-bar">
+      <div class="stat"><span class="stat-label">Rows</span><span class="stat-value" id="stat-rows">—</span></div>
+      <div class="stat"><span class="stat-label">Total Expenses</span><span class="stat-value negative" id="stat-expenses">—</span></div>
+      <div class="stat"><span class="stat-label">Total Credits</span><span class="stat-value positive" id="stat-credits">—</span></div>
+      <div class="stat"><span class="stat-label">Net</span><span class="stat-value" id="stat-net">—</span></div>
+      <div class="actions">
+        <label class="toggle-label"><input type="checkbox" id="include-header" checked /> Include Header</label>
+        <button class="btn btn-green btn-sm" id="copy-tsv-btn">&#x1F4CB; Copy for Google Sheets</button>
+        <button class="btn btn-secondary btn-sm" id="download-csv-btn">&#x2B07; Download CSV</button>
+        <button class="btn btn-secondary btn-sm" id="clear-btn">Clear</button>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table id="preview-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Date</th>
+            <th>Description</th>
+            <th style="text-align:right">Amount</th>
+            <th>Account</th>
+            <th>Category</th>
+            <th>Owner</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="preview-tbody"></tbody>
+      </table>
+    </div>
+    <p style="font-size:0.75rem;color:var(--muted)">Click any cell to edit. Amount sign convention: negative = expense, positive = credit/payment.</p>
+  </div>
+
+</main>
+<div id="toast"></div>
+
+<script>
+// ─── BANK ADAPTERS ────────────────────────────────────────────────────────────
+const ADAPTERS = {
+  capital_one: {
+    label:       'Capital One Credit Card',
+    dateCol:     'posted date',
+    descCol:     'description',
+    amountMode:  'debit_credit',
+    debitCol:    'debit',
+    creditCol:   'credit',
+    categoryCol: 'category',
+    accountCol:  'card no.',
+  },
+  chase_bank: {
+    label:       'Chase Bank Account',
+    dateCol:     'posting date',
+    descCol:     'description',
+    amountMode:  'signed',
+    amountCol:   'amount',
+    notesCol:    'type',
+  },
+  chase_card: {
+    label:       'Chase Credit Card',
+    dateCol:     'post date',
+    descCol:     'description',
+    amountMode:  'signed',
+    amountCol:   'amount',
+    categoryCol: 'category',
+    notesCol:    'memo',
+  },
+  amex: {
+    label:       'American Express',
+    dateCol:     'date',
+    descCol:     'description',
+    amountMode:  'amex_negate',   // Amex: positive=charge→flip to negative
+    amountCol:   'amount',
+  },
+  citi_custom: {
+    label:       'Citi CustomCash Card',
+    dateCol:     'date',
+    descCol:     'description',
+    amountMode:  'debit_credit',
+    debitCol:    'debit',
+    creditCol:   'credit',
+  },
+  citi_costco: {
+    label:       'Citi Costco Anywhere Card',
+    dateCol:     'date',
+    descCol:     'description',
+    amountMode:  'debit_credit',
+    debitCol:    'debit',
+    creditCol:   'credit',
+    ownerCol:    'member name',
+  },
+};
+
+// ─── CSV PARSER (RFC 4180 compliant) ──────────────────────────────────────────
+function parseCSV(text) {
+  const rows = [];
+  let field = '', row = [], inQuote = false;
+  const t = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  for (let i = 0; i < t.length; i++) {
+    const ch = t[i];
+    if (inQuote) {
+      if (ch === '"' && t[i+1] === '"') { field += '"'; i++; }
+      else if (ch === '"') { inQuote = false; }
+      else { field += ch; }
+    } else {
+      if (ch === '"') { inQuote = true; }
+      else if (ch === ',') { row.push(field.trim()); field = ''; }
+      else if (ch === '\n') { row.push(field.trim()); field = ''; if (row.some(c => c !== '')) rows.push(row); row = []; }
+      else { field += ch; }
+    }
+  }
+  row.push(field.trim());
+  if (row.some(c => c !== '')) rows.push(row);
+  return rows;
+}
+
+// ─── DATE NORMALIZER → MM/DD/YYYY ─────────────────────────────────────────────
+function normalizeDate(raw) {
+  if (!raw) return '';
+  raw = raw.trim();
+  // ISO: 2025-01-15
+  let m = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (m) return `${m[2]}/${m[3]}/${m[1]}`;
+  // MM/DD/YYYY or M/D/YYYY
+  m = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (m) return `${m[1].padStart(2,'0')}/${m[2].padStart(2,'0')}/${m[3]}`;
+  // MM/DD/YY
+  m = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2})$/);
+  if (m) {
+    const yr = parseInt(m[3]) < 50 ? '20' + m[3] : '19' + m[3];
+    return `${m[1].padStart(2,'0')}/${m[2].padStart(2,'0')}/${yr}`;
+  }
+  return raw; // pass through if unrecognized
+}
+
+// ─── AMOUNT NORMALIZER ────────────────────────────────────────────────────────
+function parseNum(s) {
+  if (!s || s.trim() === '') return 0;
+  return parseFloat(s.replace(/[$,\s]/g, '')) || 0;
+}
+
+function normalizeAmount(row, adapter) {
+  switch (adapter.amountMode) {
+    case 'signed':
+      return parseNum(row[adapter.amountCol] || '');
+    case 'amex_negate':
+      // Amex: positive = charge (expense), negative = payment (credit) — flip sign
+      return -(parseNum(row[adapter.amountCol] || ''));
+    case 'debit_credit':
+      // Debit = money out (expense → negative), Credit = money in (positive)
+      return parseNum(row[adapter.creditCol] || '') - parseNum(row[adapter.debitCol] || '');
+    default:
+      return 0;
+  }
+}
+
+// ─── AUTO-DETECT ADAPTER FROM HEADERS ────────────────────────────────────────
+function autoDetect(headers) {
+  const h = new Set(headers.map(x => x.toLowerCase().trim()));
+  if (h.has('posted date') && h.has('card no.'))              return 'capital_one';
+  if (h.has('posting date') && h.has('balance'))              return 'chase_bank';
+  if (h.has('post date') && h.has('memo'))                    return 'chase_card';
+  if (h.has('member name'))                                    return 'citi_costco';
+  if (h.has('status') && h.has('debit') && h.has('credit') && !h.has('member name')) return 'citi_custom';
+  // Amex: has 'date','description','amount' and very few columns
+  if (h.has('date') && h.has('amount') && !h.has('debit') && !h.has('balance') && headers.length <= 5) return 'amex';
+  return null;
+}
+
+// ─── TRANSFORM CSV ROWS → APP SCHEMA ─────────────────────────────────────────
+function transformRows(csvRows, adapterId, globalAccount, globalOwner) {
+  const adapter = ADAPTERS[adapterId];
+  if (!adapter) throw new Error('Unknown adapter: ' + adapterId);
+
+  const headers = csvRows[0].map(h => h.toLowerCase().trim());
+  const col = name => headers.indexOf(name.toLowerCase().trim());
+
+  // Validate required columns
+  const missingDate = col(adapter.dateCol) === -1;
+  const missingDesc = col(adapter.descCol) === -1;
+  let missingAmt = false;
+  if (adapter.amountMode === 'signed' || adapter.amountMode === 'amex_negate') {
+    missingAmt = col(adapter.amountCol) === -1;
+  } else if (adapter.amountMode === 'debit_credit') {
+    missingAmt = col(adapter.debitCol) === -1 && col(adapter.creditCol) === -1;
+  }
+  if (missingDate || missingDesc || missingAmt) {
+    const missing = [];
+    if (missingDate) missing.push(`"${adapter.dateCol}"`);
+    if (missingDesc) missing.push(`"${adapter.descCol}"`);
+    if (missingAmt)  missing.push('amount column(s)');
+    throw new Error(`Headers not found: ${missing.join(', ')}. Check that you selected the correct bank and that the CSV header row is included.`);
+  }
+
+  // Build row lookup helper
+  const getCol = (row, name) => name ? (col(name) >= 0 ? (row[col(name)] || '').trim() : '') : '';
+
+  return csvRows.slice(1).map(row => {
+    // Build keyed object for adapter access
+    const keyed = {};
+    headers.forEach((h, i) => { keyed[h] = (row[i] || '').trim(); });
+    adapter.amountCol  && (keyed[adapter.amountCol]  = keyed[adapter.amountCol]);
+    adapter.debitCol   && (keyed[adapter.debitCol]   = keyed[adapter.debitCol]);
+    adapter.creditCol  && (keyed[adapter.creditCol]  = keyed[adapter.creditCol]);
+
+    const rawDate = getCol(row, adapter.dateCol);
+    const amount  = normalizeAmount(keyed, adapter);
+
+    // Skip empty/zero-amount rows
+    if (!rawDate && amount === 0) return null;
+
+    return {
+      date:         normalizeDate(rawDate),
+      description:  getCol(row, adapter.descCol),
+      amount:       amount,
+      category:     getCol(row, adapter.categoryCol) || '',
+      account:      globalAccount || getCol(row, adapter.accountCol) || '',
+      accountOwner: globalOwner   || getCol(row, adapter.ownerCol) || '',
+      notes:        getCol(row, adapter.notesCol) || '',
+    };
+  }).filter(Boolean);
+}
+
+// ─── DATE RANGE FILTER ───────────────────────────────────────────────────────
+function dateToComparable(mmddyyyy) {
+  // MM/DD/YYYY → YYYYMMDD integer for easy comparison
+  const m = (mmddyyyy || '').match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (!m) return null;
+  return parseInt(m[3] + m[1] + m[2]);
+}
+
+function applyDateFilter(rows) {
+  const fromVal = document.getElementById('date-from').value; // YYYY-MM-DD or ''
+  const toVal   = document.getElementById('date-to').value;
+  if (!fromVal && !toVal) return rows;
+
+  const fromInt = fromVal ? parseInt(fromVal.replace(/-/g, '')) : null; // YYYYMMDD
+  const toInt   = toVal   ? parseInt(toVal.replace(/-/g, ''))   : null;
+
+  return rows.filter(r => {
+    const d = dateToComparable(r.date);
+    if (d === null) return true; // keep rows with unparseable dates
+    if (fromInt && d < fromInt) return false;
+    if (toInt   && d > toInt)   return false;
+    return true;
+  });
+}
+
+// ─── FMT ─────────────────────────────────────────────────────────────────────
+function fmt(n) {
+  return (n < 0 ? '-' : '') + '$' + Math.abs(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
+// ─── RENDER PREVIEW TABLE ─────────────────────────────────────────────────────
+let parsedRows = [];
+
+function renderPreview(rows) {
+  parsedRows = rows;
+  const tbody = document.getElementById('preview-tbody');
+  tbody.innerHTML = '';
+
+  rows.forEach((r, i) => {
+    const tr = document.createElement('tr');
+    if (!r.date || r.date === '') tr.classList.add('error-row');
+    tr.innerHTML = `
+      <td class="row-num">${i + 1}</td>
+      <td class="date-cell">${esc(r.date)}</td>
+      <td><span contenteditable="true" data-field="description" data-idx="${i}">${esc(r.description)}</span></td>
+      <td class="amount-cell"><span contenteditable="true" data-field="amount" data-idx="${i}">${r.amount.toFixed(2)}</span></td>
+      <td><span contenteditable="true" data-field="account" data-idx="${i}">${esc(r.account)}</span></td>
+      <td><span contenteditable="true" data-field="category" data-idx="${i}">${esc(r.category)}</span></td>
+      <td><span contenteditable="true" data-field="accountOwner" data-idx="${i}">${esc(r.accountOwner)}</span></td>
+      <td><button class="btn-danger" data-del="${i}" title="Remove row">&#x2715;</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  // Sync edits back to parsedRows
+  tbody.querySelectorAll('[contenteditable]').forEach(el => {
+    el.addEventListener('input', () => {
+      const idx   = parseInt(el.dataset.idx);
+      const field = el.dataset.field;
+      const val   = el.textContent.trim();
+      if (field === 'amount') parsedRows[idx].amount = parseFloat(val) || 0;
+      else parsedRows[idx][field] = val;
+      updateSummary();
+    });
+  });
+
+  // Delete row
+  tbody.querySelectorAll('[data-del]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.dataset.del);
+      parsedRows.splice(idx, 1);
+      renderPreview(parsedRows);
+      updateSummary();
+    });
+  });
+
+  document.getElementById('step-preview').style.display = 'flex';
+  updateSummary();
+  document.getElementById('step-preview').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function updateSummary() {
+  const rows = parsedRows;
+  const expenses = rows.filter(r => r.amount < 0).reduce((s, r) => s + r.amount, 0);
+  const credits  = rows.filter(r => r.amount > 0).reduce((s, r) => s + r.amount, 0);
+  const net      = expenses + credits;
+  document.getElementById('stat-rows').textContent     = rows.length;
+  document.getElementById('stat-expenses').textContent = fmt(expenses);
+  document.getElementById('stat-credits').textContent  = fmt(credits);
+  const netEl = document.getElementById('stat-net');
+  netEl.textContent = fmt(net);
+  netEl.className = 'stat-value ' + (net >= 0 ? 'positive' : 'negative');
+}
+
+function esc(s) {
+  return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ─── EXPORT ───────────────────────────────────────────────────────────────────
+const OUTPUT_HEADERS = ['Date','Description','Amount','Account','Category','Account Owner'];
+
+function rowsToTSV(rows, includeHeader = true) {
+  const lines = includeHeader ? [OUTPUT_HEADERS.join('\t')] : [];
+  rows.forEach(r => {
+    lines.push([r.date, r.description, r.amount.toFixed(2), r.account, r.category, r.accountOwner]
+      .map(v => String(v).replace(/\t/g, ' ')).join('\t'));
+  });
+  return lines.join('\n');
+}
+
+function rowsToCSV(rows, includeHeader = true) {
+  const q = v => { const s = String(v); return (s.includes(',') || s.includes('"') || s.includes('\n')) ? '"' + s.replace(/"/g,'""') + '"' : s; };
+  const lines = includeHeader ? [OUTPUT_HEADERS.map(q).join(',')] : [];
+  rows.forEach(r => {
+    lines.push([r.date, r.description, r.amount.toFixed(2), r.account, r.category, r.accountOwner].map(q).join(','));
+  });
+  return lines.join('\n');
+}
+
+function showToast(msg, duration=2200) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), duration);
+}
+
+document.getElementById('copy-tsv-btn').addEventListener('click', () => {
+  if (!parsedRows.length) return;
+  // Sync latest edits from DOM before exporting
+  document.querySelectorAll('[data-field]').forEach(el => {
+    const idx = parseInt(el.dataset.idx);
+    const field = el.dataset.field;
+    if (idx >= 0 && idx < parsedRows.length) {
+      if (field === 'amount') parsedRows[idx].amount = parseFloat(el.textContent.trim()) || 0;
+      else parsedRows[idx][field] = el.textContent.trim();
+    }
+  });
+  const withHeader = document.getElementById('include-header').checked;
+  navigator.clipboard.writeText(rowsToTSV(parsedRows, withHeader))
+    .then(() => showToast('✓ Copied! Paste directly into Google Sheets.'))
+    .catch(() => showToast('Copy failed — try the Download button instead.'));
+});
+
+document.getElementById('download-csv-btn').addEventListener('click', () => {
+  if (!parsedRows.length) return;
+  const withHdr = document.getElementById('include-header').checked;
+  const blob = new Blob([rowsToCSV(parsedRows, withHdr)], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `transactions_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+});
+
+document.getElementById('clear-btn').addEventListener('click', () => {
+  parsedRows = [];
+  document.getElementById('preview-tbody').innerHTML = '';
+  document.getElementById('step-preview').style.display = 'none';
+  document.getElementById('csv-input').value = '';
+  document.getElementById('parse-error').style.display = 'none';
+});
+
+// ─── PARSE BUTTON ─────────────────────────────────────────────────────────────
+document.getElementById('parse-btn').addEventListener('click', () => {
+  const errEl = document.getElementById('parse-error');
+  errEl.style.display = 'none';
+
+  const text = document.getElementById('csv-input').value.trim();
+  if (!text) { showError(errEl, 'Please paste CSV data first.'); return; }
+
+  const bankId = document.querySelector('input[name="bank"]:checked')?.value;
+  if (!bankId) { showError(errEl, 'Please select a bank / card type.'); return; }
+
+  try {
+    const csvRows = parseCSV(text);
+    if (csvRows.length < 2) { showError(errEl, 'CSV must have a header row and at least one data row.'); return; }
+    const rows = transformRows(
+      csvRows, bankId,
+      document.getElementById('global-account').value.trim(),
+      document.getElementById('global-owner').value.trim()
+    );
+    const filtered = applyDateFilter(rows);
+    if (!filtered.length) { showError(errEl, rows.length ? 'No transactions fall within the selected date range.' : 'No valid transactions found after parsing.'); return; }
+    renderPreview(filtered);
+  } catch (e) {
+    showError(errEl, e.message);
+  }
+});
+
+function showError(el, msg) {
+  el.textContent = '⚠ ' + msg;
+  el.style.display = 'block';
+}
+
+// ─── FILE UPLOAD ──────────────────────────────────────────────────────────────
+document.getElementById('file-input').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    document.getElementById('csv-input').value = ev.target.result;
+    tryAutoDetect(ev.target.result);
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+});
+
+// ─── DATE RANGE CLEAR ────────────────────────────────────────────────────────
+document.getElementById('date-range-clear').addEventListener('click', () => {
+  document.getElementById('date-from').value = '';
+  document.getElementById('date-to').value   = '';
+});
+
+// ─── DRAG & DROP ──────────────────────────────────────────────────────────────
+const csvInput = document.getElementById('csv-input');
+
+csvInput.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  csvInput.classList.add('drag-over');
+});
+
+csvInput.addEventListener('dragleave', (e) => {
+  if (!csvInput.contains(e.relatedTarget)) csvInput.classList.remove('drag-over');
+});
+
+csvInput.addEventListener('drop', (e) => {
+  e.preventDefault();
+  csvInput.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    csvInput.value = ev.target.result;
+    tryAutoDetect(ev.target.result);
+  };
+  reader.readAsText(file);
+});
+
+// ─── AUTO-DETECT ON PASTE ─────────────────────────────────────────────────────
+document.getElementById('csv-input').addEventListener('paste', e => {
+  setTimeout(() => tryAutoDetect(document.getElementById('csv-input').value), 50);
+});
+
+function tryAutoDetect(text) {
+  try {
+    const rows = parseCSV(text.trim());
+    if (!rows.length) return;
+    const detected = autoDetect(rows[0]);
+    const badge = document.getElementById('auto-detect-badge');
+    if (detected) {
+      document.getElementById('b-' + detected.replace(/_/g,'-')).checked = true;
+      badge.textContent = '✓ Auto-detected: ' + ADAPTERS[detected].label;
+      badge.style.display = 'inline-block';
+    } else {
+      badge.style.display = 'none';
+    }
+  } catch {}
+}
+</script>
+</body>
+</html>

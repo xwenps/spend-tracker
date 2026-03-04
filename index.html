@@ -191,6 +191,10 @@
     }
     .type-btn.active-expense { background: #e05c5c22; color: #e05c5c; }
     .type-btn.active-income  { background: #4caf9122; color: #4caf91; }
+
+    .header-nav { display: flex; align-items: center; gap: 4px; }
+    .nav-link { color: var(--muted); text-decoration: none; font-size: 0.82rem; padding: 5px 12px; border-radius: 7px; border: 1px solid var(--border); transition: color 0.15s, border-color 0.15s; white-space: nowrap; }
+    .nav-link:hover { color: var(--accent); border-color: var(--accent); }
   </style>
 </head>
 <body>
@@ -198,6 +202,7 @@
 <!-- AUTH SCREEN -->
 <div id="auth-screen">
   <h1>&#x1F4B8; Spend Tracker</h1>
+      <nav class="header-nav"><a href="./process.html" class="nav-link">&#x1F4C4; Process Transactions</a></nav>
   <p>Enter your credentials to connect your Google Sheet</p>
   <div id="config-form">
     <div id="config-status">&#x2713; config.json found &mdash; values pre-filled</div>
@@ -652,7 +657,7 @@ function renderExpenseTrendChart() {
     data: { labels, datasets: [{ label: 'Expenses', data: values, borderColor: '#e05c5c', backgroundColor: '#e05c5c22', fill: true, tension: 0.4, pointRadius: 4, pointBackgroundColor: '#e05c5c' }] },
     options: { ...baseOpts(),
       scales: {
-        x: { ...axisStyle(), ticks: { ...tickStyle() } },
+x: { ...axisStyle(), ticks: { ...tickStyle() } },
         y: { ...axisStyle(), ticks: { ...tickStyle(), callback: v => '$' + v.toLocaleString() } }
       }
     }
