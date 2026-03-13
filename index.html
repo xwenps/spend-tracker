@@ -44,6 +44,20 @@
     #config-status { font-size: 0.8rem; color: var(--green); display: none; }
     #auth-error { color: var(--red); font-size: 0.85rem; display: none; }
 
+    /* ── AUTH FORM LABELS ── */
+    .field-group { display: flex; flex-direction: column; gap: 5px; }
+    .field-group label { font-size: 0.78rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+    .auth-hint { font-size: 0.75rem; color: var(--muted); max-width: 380px; text-align: center; }
+    .auth-hint code { background: var(--surface2); padding: 1px 5px; border-radius: 4px; font-size: 0.8rem; color: var(--accent); }
+    .btn-row { display:flex; gap:8px; }
+    .btn-row #signin-btn { flex: 1 1 auto; width: auto; }
+    .demo-mode-btn { background:var(--surface2); border:1px solid var(--border); color:var(--text); padding:12px; border-radius:8px; cursor:pointer; font-size: 1rem; font-weight: 600; }
+
+    /* LOADING */
+    #loading { display: none; text-align: center; padding: 60px; color: var(--muted); }
+    .spinner { width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
     /* MAIN APP */
     #app { display: none; padding: 24px; max-width: 1400px; margin: 0 auto; }
     header {
@@ -114,20 +128,7 @@
     .page-btn { background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 5px 12px; border-radius: 6px; cursor: pointer; }
     .page-btn:disabled { opacity: 0.35; cursor: default; }
 
-    /* LOADING */
-    #loading { display: none; text-align: center; padding: 60px; color: var(--muted); }
-    .spinner { width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* ── AUTH FORM LABELS ── */
-    .field-group { display: flex; flex-direction: column; gap: 5px; }
-    .field-group label { font-size: 0.78rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
-    .auth-hint { font-size: 0.75rem; color: var(--muted); max-width: 380px; text-align: center; }
-    .auth-hint code { background: var(--surface2); padding: 1px 5px; border-radius: 4px; font-size: 0.8rem; color: var(--accent); }
-    .btn-row { display:flex; gap:8px; }
-    .btn-row #signin-btn { flex: 1 1 auto; width: auto; }
-    .demo-mode-btn { background:var(--surface2); border:1px solid var(--border); color:var(--text); padding:12px; border-radius:8px; cursor:pointer; font-size: 1rem; font-weight: 600; }
-
+    
     /* Make modal inputs match main config inputs */
     .modal-box input {
       background: var(--surface2); border: 1px solid var(--border); color: var(--text);
@@ -208,10 +209,31 @@
     .header-nav { display: flex; align-items: center; gap: 4px; }
     .nav-link { color: var(--muted); text-decoration: none; font-size: 0.82rem; padding: 5px 12px; border-radius: 7px; border: 1px solid var(--border); transition: color 0.15s, border-color 0.15s; white-space: nowrap; }
     .nav-link:hover { color: var(--accent); border-color: var(--accent); }
+
+    /* ── FREQUENCY TOGGLE ── */
+    .freq-toggle-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;  /* matches charts-grid gap of 20px */
+    }
+    .freq-toggle {
+      display: inline-flex; border: 1px solid var(--border);
+      border-radius: 8px; overflow: hidden; flex-shrink: 0;
+    }
+    .freq-btn {
+      background: var(--surface2); color: var(--muted);
+      border: none; padding: 7px 14px; font-size: 0.82rem;
+      font-weight: 600; cursor: pointer; font-family: inherit;
+      border-right: 1px solid var(--border); transition: background 0.15s, color 0.15s;
+    }
+    .freq-btn:last-child { border-right: none; }
+    .freq-btn:hover { color: var(--text); }
+    .freq-btn.active { background: var(--accent); color: white; }
   </style>
 </head>
-<body>
 
+<body>
 <!-- AUTH SCREEN -->
 <div id="auth-screen">
   <h1>&#x1F4B8; Spend Tracker</h1>
@@ -270,7 +292,7 @@
 <!-- MAIN APP -->
 <div id="app">
   <header>
-    <h1>&#x1F4B8; Spend Analyzer</h1>
+    <h1>&#x1F4B8; Spend Tracker</h1>
     <div class="header-controls">
       <div class="multi-select-wrapper" id="year-wrapper">
         <div class="multi-select-trigger" id="year-trigger">All Years</div>
@@ -366,18 +388,28 @@
     </div>
   </div>
 
+  <!-- CHARTS FREQUENCY SELECTOR -->
+  <div class="freq-toggle-row ">
+    <span style="font-size:0.78rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em;">Chart Period</span>
+    <div class="freq-toggle" id="freq-toggle">
+      <button class="freq-btn active" data-freq="monthly">Monthly</button>
+      <button class="freq-btn" data-freq="quarterly">Quarterly</button>
+      <button class="freq-btn" data-freq="yearly">Yearly</button>
+    </div>
+  </div>
+
 <!-- CHARTS -->
   <div class="charts-grid">
     <div class="chart-card chart-full">
-      <h3>Monthly Net Trend</h3>
+      <h3 id="title-trend">Net Trend</h3>
       <div class="chart-wrap"><canvas id="chart-trend"></canvas></div>
     </div>
     <div class="chart-card">
-      <h3>Monthly Expense Trend</h3>
+      <h3 id="title-exptrend">Expense Trend</h3>
       <div class="chart-wrap"><canvas id="chart-expense-trend"></canvas></div>
     </div>
     <div class="chart-card">
-      <h3>Monthly Income Trend</h3>
+      <h3 id="title-income-trend">Income Trend</h3>
       <div class="chart-wrap"><canvas id="chart-income-trend"></canvas></div>
     </div>
     <div class="chart-card">
@@ -389,8 +421,8 @@
       <div class="chart-wrap"><canvas id="chart-category-bar"></canvas></div>
     </div>
     <div class="chart-card chart-full">
-      <h3>Month-over-Month Expenses</h3>
-      <div class="chart-wrap-tall"><canvas id="chart-category-month"></canvas></div>
+      <h3 id="title-category-period">Categorized Expenses by Period</h3>
+      <div class="chart-wrap-tall"><canvas id="chart-category-period"></canvas></div>
     </div>
   </div>
 
@@ -503,6 +535,14 @@ window.addEventListener('load', async () => {
   document.getElementById('cat-type-overlay').addEventListener('click', (e) => {
     if (e.target === document.getElementById('cat-type-overlay'))
       document.getElementById('cat-type-overlay').style.display = 'none';
+  });
+  document.getElementById('freq-toggle').addEventListener('click', e => {
+    const btn = e.target.closest('.freq-btn');
+    if (!btn) return;
+    chartFreq = btn.dataset.freq;
+    document.querySelectorAll('.freq-btn').forEach(b => b.classList.toggle('active', b === btn));
+    updateChartTitles();
+    renderCharts();
   });
 });
 
@@ -630,6 +670,7 @@ function applyFiltersAndRender() {
   });
   currentPage = 1;
   renderKPIs();
+  updateChartTitles();
   renderCharts();
   renderTable();
 }
@@ -761,6 +802,35 @@ function renderKPIs() {
 }
 
 // ─── CHARTS ───────────────────────────────────────────────────────────────────
+let chartFreq = 'monthly';
+function getFreqKey(row) {
+  if (!row.year || !row.monthNum) return null;
+  if (chartFreq === 'yearly')    return String(row.year);
+  if (chartFreq === 'quarterly') return `${row.year}-Q${Math.ceil(row.monthNum / 3)}`;
+  return `${row.year}-${String(row.monthNum).padStart(2, '0')}`;
+}
+
+function freqKeyLabel(key) {
+  if (chartFreq === 'yearly')    return key;
+  if (chartFreq === 'quarterly') return key.replace('-', ' ');  // "2024 Q2"
+  const [y, m] = key.split('-');
+  return `${MONTHS[parseInt(m) - 1]} ${y.slice(2)}`;           // "Jan 24"
+}
+
+const CHART_TITLES = {
+  monthly:   { trend: 'Monthly Net Trend',      exptrend: 'Monthly Expense Trend',   inctrend: 'Monthly Income Trend',   catmonth: 'Month-over-Month Expenses' },
+  quarterly: { trend: 'Quarterly Net Trend',    exptrend: 'Quarterly Expense Trend', inctrend: 'Quarterly Income Trend', catmonth: 'Quarter-over-Quarter Expenses' },
+  yearly:    { trend: 'Yearly Net Trend',        exptrend: 'Yearly Expense Trend',    inctrend: 'Yearly Income Trend',    catmonth: 'Year-over-Year Expenses' },
+};
+
+function updateChartTitles() {
+  const t = CHART_TITLES[chartFreq];
+  document.getElementById('title-trend').textContent    = t.trend;
+  document.getElementById('title-exptrend').textContent = t.exptrend;
+  document.getElementById('title-income-trend').textContent = t.inctrend;
+  document.getElementById('title-category-period').textContent = t.catmonth;
+}
+
 function destroyChart(id) { if (charts[id]) { charts[id].destroy(); delete charts[id]; } }
 function renderCharts() {
   renderNetTrendChart();
@@ -773,67 +843,62 @@ function renderCharts() {
 
 function renderNetTrendChart() {
   destroyChart('trend');
-  const keys    = [...new Set(filteredData.filter(r => r.monthNum).map(r => `${r.year}-${String(r.monthNum).padStart(2, '0')}`))].sort();
-  const labels  = keys.map(k => { const [y, m] = k.split('-'); return `${MONTHS[parseInt(m) - 1]} ${y}`; });
+  const keys = [...new Set(filteredData.filter(r => r.monthNum).map(r => getFreqKey(r)).filter(Boolean))].sort();
+  const labels = keys.map(freqKeyLabel);
   const netData = keys.map(k => {
-    const [y, m] = k.split('-');
-    const inc = sumArr(filteredData.filter(r => r.monthNum === parseInt(m) && r.year === parseInt(y) && (categoryTypes[r.category] || 'Expense') === 'Income'));
-    const exp = sumArr(filteredData.filter(r => r.monthNum === parseInt(m) && r.year === parseInt(y) && (categoryTypes[r.category] || 'Expense') === 'Expense'));
+    const inc = sumArr(filteredData.filter(r => getFreqKey(r) === k && categoryTypes[r.category] !== 'Expense'));
+    const exp = sumArr(filteredData.filter(r => getFreqKey(r) === k && categoryTypes[r.category] === 'Expense'));
     return inc + exp;
   });
   charts['trend'] = new Chart(document.getElementById('chart-trend'), {
     type: 'line',
-    data: { labels, datasets: [
-      { label: 'Net', data: netData, borderColor: PALETTE[2], backgroundColor: PALETTE[2] + '22', fill: true, tension: 0.4, pointRadius: 4, pointBackgroundColor: PALETTE[2] },
-    ]},
-    options: { ...baseOpts(),
-      scales: {
-        x: { ...axisStyle(), ticks: { ...tickStyle() } },
-        y: { ...axisStyle(), ticks: { ...tickStyle(), callback: v => '$' + v.toLocaleString() } }
-      }
-    }
+    data: { labels, datasets: [{ label: 'Net', data: netData, borderColor: PALETTE[2], backgroundColor: PALETTE[2] + '22', fill: true, tension: 0.4, pointRadius: 4, pointBackgroundColor: PALETTE[2] }] },
+    options: { ...baseOpts(), scales: { x: { ...axisStyle(), ticks: tickStyle() }, y: { ...axisStyle(), ticks: { ...tickStyle(), callback: v => v.toLocaleString() } } } }
   });
 }
 
 function renderExpenseTrendChart() {
   destroyChart('exptrend');
-  const rows   = filteredData.filter(r => (categoryTypes[r.category] || 'Expense') === 'Expense' && r.monthNum);
-  const keys   = [...new Set(rows.map(r => `${r.year}-${String(r.monthNum).padStart(2, '0')}`))].sort();
-  const labels = keys.map(k => { const [y, m] = k.split('-'); return `${MONTHS[parseInt(m) - 1]} ${y}`; });
-  const values = keys.map(k => {
-    const [y, m] = k.split('-');
-    return Math.abs(sumArr(rows.filter(r => r.monthNum === parseInt(m) && r.year === parseInt(y))));
-  });
+  const rows = filteredData.filter(r => categoryTypes[r.category] === 'Expense' && r.monthNum);
+  const keys = [...new Set(rows.map(r => getFreqKey(r)).filter(Boolean))].sort();
+  const labels = keys.map(freqKeyLabel);
+  const values = keys.map(k => Math.abs(sumArr(rows.filter(r => getFreqKey(r) === k))));
   charts['exptrend'] = new Chart(document.getElementById('chart-expense-trend'), {
     type: 'line',
     data: { labels, datasets: [{ label: 'Expenses', data: values, borderColor: '#e05c5c', backgroundColor: '#e05c5c22', fill: true, tension: 0.4, pointRadius: 4, pointBackgroundColor: '#e05c5c' }] },
-    options: { ...baseOpts(),
-      scales: {
-x: { ...axisStyle(), ticks: { ...tickStyle() } },
-        y: { ...axisStyle(), ticks: { ...tickStyle(), callback: v => '$' + v.toLocaleString() } }
-      }
-    }
+    options: { ...baseOpts(), scales: { x: { ...axisStyle(), ticks: tickStyle() }, y: { ...axisStyle(), ticks: { ...tickStyle(), callback: v => v.toLocaleString() } } } }
   });
 }
 
 function renderIncomeTrendChart() {
   destroyChart('inctrend');
-  const rows   = filteredData.filter(r => (categoryTypes[r.category] || 'Expense') === 'Income' && r.monthNum);
-  const keys   = [...new Set(rows.map(r => `${r.year}-${String(r.monthNum).padStart(2, '0')}`))].sort();
-  const labels = keys.map(k => { const [y, m] = k.split('-'); return `${MONTHS[parseInt(m) - 1]} ${y}`; });
-  const values = keys.map(k => {
-    const [y, m] = k.split('-');
-    return sumArr(rows.filter(r => r.monthNum === parseInt(m) && r.year === parseInt(y)));
-  });
+  const rows = filteredData.filter(r => categoryTypes[r.category] !== 'Expense' && r.monthNum);
+  const keys = [...new Set(rows.map(r => getFreqKey(r)).filter(Boolean))].sort();
+  const labels = keys.map(freqKeyLabel);
+  const values = keys.map(k => sumArr(rows.filter(r => getFreqKey(r) === k)));
   charts['inctrend'] = new Chart(document.getElementById('chart-income-trend'), {
     type: 'line',
     data: { labels, datasets: [{ label: 'Income', data: values, borderColor: '#4caf91', backgroundColor: '#4caf9122', fill: true, tension: 0.4, pointRadius: 4, pointBackgroundColor: '#4caf91' }] },
-    options: { ...baseOpts(),
-      scales: {
-        x: { ...axisStyle(), ticks: { ...tickStyle() } },
-        y: { ...axisStyle(), ticks: { ...tickStyle(), callback: v => '$' + v.toLocaleString() } }
-      }
-    }
+    options: { ...baseOpts(), scales: { x: { ...axisStyle(), ticks: tickStyle() }, y: { ...axisStyle(), ticks: { ...tickStyle(), callback: v => v.toLocaleString() } } } }
+  });
+}
+
+function renderCategoryMonthChart() {
+  destroyChart('catmonth');
+  const rows = filteredData.filter(r => categoryTypes[r.category] === 'Expense' && r.monthNum);
+  const topCats = Object.entries(groupBy(rows, r => r.category))
+    .sort((a, b) => Math.abs(sumArr(b[1])) - Math.abs(sumArr(a[1]))).slice(0, 6).map(e => e[0]);
+  const keys = [...new Set(rows.map(r => getFreqKey(r)).filter(Boolean))].sort();
+  const labels = keys.map(freqKeyLabel);
+  const datasets = topCats.map((cat, i) => ({
+    label: cat,
+    data: keys.map(k => Math.abs(sumArr(rows.filter(r => r.category === cat && getFreqKey(r) === k)))),
+    backgroundColor: PALETTE[i % PALETTE.length] + 'cc', borderRadius: 4,
+  }));
+  charts['catmonth'] = new Chart(document.getElementById('chart-category-period'), {
+    type: 'bar',
+    data: { labels, datasets },
+    options: { ...baseOpts(), scales: { x: { stacked: true, ...axisStyle(), ticks: tickStyle() }, y: { stacked: true, ...axisStyle(), ticks: { ...tickStyle(), callback: v => v.toLocaleString() } } } }
   });
 }
 
@@ -866,29 +931,6 @@ function renderCategoryBar() {
     data: { labels: sorted.map(e => e[0]), datasets: [{ data: sorted.map(e => e[1]), backgroundColor: PALETTE, borderRadius: 6 }] },
     options: { ...baseOpts(), plugins: { ...baseOpts().plugins, legend: { display: false } },
       scales: { x: { ...axisStyle(), ticks: { ...tickStyle(), maxRotation: 35 } }, y: { ...axisStyle(), ticks: { ...tickStyle(), callback: v => '$' + v.toLocaleString() } } } }
-  });
-}
-
-function renderCategoryMonthChart() {
-  destroyChart('catmonth');
-  const rows    = filteredData.filter(r => (categoryTypes[r.category] || 'Expense') === 'Expense');
-  const topCats = Object.entries(groupBy(rows, r => r.category))
-    .sort((a, b) => Math.abs(sumArr(b[1])) - Math.abs(sumArr(a[1]))).slice(0, 6).map(e => e[0]);
-  const monthKeys = [...new Set(rows.filter(r => r.monthNum).map(r => `${r.year}-${String(r.monthNum).padStart(2, '0')}`))].sort();
-  const labels    = monthKeys.map(k => { const [y, m] = k.split('-'); return `${MONTHS[parseInt(m) - 1]} ${y.slice(2)}`; });
-  const datasets  = topCats.map((cat, i) => ({
-    label: cat,
-    data: monthKeys.map(k => {
-      const [y, m] = k.split('-');
-      return Math.abs(sumArr(rows.filter(r => r.category === cat && r.year === parseInt(y) && r.monthNum === parseInt(m))));
-    }),
-    backgroundColor: PALETTE[i % PALETTE.length] + 'cc', borderRadius: 4,
-  }));
-  charts['catmonth'] = new Chart(document.getElementById('chart-category-month'), {
-    type: 'bar', data: { labels, datasets },
-    options: { ...baseOpts(), scales: {
-      x: { stacked: true, ...axisStyle(), ticks: tickStyle() },
-      y: { stacked: true, ...axisStyle(), ticks: { ...tickStyle(), callback: v => '$' + v.toLocaleString() } } } }
   });
 }
 

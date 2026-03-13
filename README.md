@@ -3,7 +3,7 @@ Check out the "Demo Mode" wih any public google sheet: https://xwenps.github.io/
 ![Transaction Processor demo](./assets/demo.gif)
 ## About
 
-Soend Tracker is an app that links to a Google Sheet. 
+Spend Tracker is an app that links to a Google Sheet. 
 No direct connections to financial institutions needed.
 Categorize your transactions and adjust with ease and all the flexibility Google Sheets offers.
 
