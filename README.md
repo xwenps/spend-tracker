@@ -59,7 +59,11 @@ You must enable API access to Google Sheets, create an OAuth2 Client ID and set 
 1. In APIs & Services → Credentials, also create an OAuth 2.0 Client ID (type: Web application)
 2. Add `http://localhost` (or alternative hosted origin ie. ` https://xwenps.github.io`) to Authorized JavaScript origins
 3. You'll use the `Client ID` to connect
-4. You should set the Data Access to allow only for Reads to Spreadsheets: `.../auth/spreadsheets.readonly`
+4. You should set the Data Access to allow only for the following scopes for:
+    1. integration for login with Google: `openid`,
+    1. reads to Spreadsheets: `.../auth/spreadsheets.readonly`
+    1. populating user's email: `auth/userinfo.email`
+    1. populating user's name: `...auth/userinfo.profile`
 
 ## How to Run
 
