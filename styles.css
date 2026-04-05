@@ -358,6 +358,17 @@ button.ctrl-btn:hover { border-color: var(--accent); background: var(--surface2)
   overflow: hidden;
 }
 .user-dropdown-menu.open { display: block; }
+
+/* Mobile positioning fix for user dropdown */
+@media (max-width: 768px) {
+  .user-dropdown-menu {
+    right: auto;
+    left: 0;
+    min-width: 200px;
+    max-width: calc(100vw - 20px);
+  }
+}
+
 .user-dropdown-header { padding: 12px 16px; border-bottom: 1px solid var(--border); }
 .user-dropdown-header .ud-name  { font-size: 0.88rem; font-weight: 600; }
 .user-dropdown-header .ud-email {
