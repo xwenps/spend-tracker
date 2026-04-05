@@ -1,0 +1,37 @@
+# Git
+.git/
+.gitignore
+
+# Development files
+*.log
+.env
+.env.local
+.env.*.local
+.env.example
+Dockerfile-dev
+dev..sh
+config.json
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Archive versions
+archive/
+
+# Node modules (if any)
+node_modules/
+npm-debug.log*
+
+# Docker
+Dockerfile*
+docker-compose.yml
+
+# Documentation
+assets/*
+examples/*
+README.md

@@ -1,0 +1,19 @@
+FROM nginx:alpine
+
+# Copy static files to nginx html directory
+COPY . /usr/share/nginx/html/
+
+# Copy custom nginx config if you have one (optional)
+# COPY nginx.conf /etc/nginx/nginx.conf
+
+# Set default environment variables (will be overridden by --env-file)
+ENV CLIENT_ID=""
+ENV SHEET_ID_DATA=""
+ENV DOC_ID_CONFIG=""
+
+# Expose port 80
+EXPOSE 80
+
+# Use envsubst to replace environment variables in HTML at runtime
+# This runs before nginx starts, substituting ${VAR} with actual values
+CMD ["/bin/sh", "-c", "envsubst '${CLIENT_ID} ${SHEET_ID_DATA} ${DOC_ID_CONFIG}' < /usr/share/nginx/html/index.html > /usr/share/nginx/html/index.html.tmp && mv /usr/share/nginx/html/index.html.tmp /usr/share/nginx/html/index.html && nginx -g 'daemon off;'"]
