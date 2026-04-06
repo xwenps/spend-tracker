@@ -4,14 +4,15 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Transaction Processor · Spend Tracker</title>
+  <link rel="icon" type="image/x-icon" href="./favicon.ico">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css">
   <style>
-    :root {
-      --bg:      #0d1117; --surface: #161b27; --surface2: #1e2436;
-      --border:  #2e3250; --text:    #e8eaf6; --muted:    #8892b0;
-      --accent:  #7c83f5; --green:   #4caf91; --red:      #e05c5c;
-    }
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; font-size: 14px; min-height: 100vh; }
+    /* ── Process-app specific overrides (inherits all tokens from styles.css) ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Inter', 'Segoe UI', system-ui, sans-serif; font-size: 14px; min-height: 100vh; }
 
     /* ── HEADER ── */
     header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 28px; display: flex; align-items: center; gap: 16px; }
@@ -22,7 +23,7 @@
 
     /* ── LAYOUT ── */
     main { max-width: 1100px; margin: 0 auto; padding: 28px 24px; display: flex; flex-direction: column; gap: 24px; }
-    .section { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 22px 24px; display: flex; flex-direction: column; gap: 16px; }
+    .section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 22px 24px; display: flex; flex-direction: column; gap: 16px; }
     .section h2 { font-size: 0.9rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
 
     /* ── GLOBAL FIELDS ── */
@@ -31,17 +32,17 @@
     .field-group label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
     .field-group input, .field-group select {
       background: var(--surface2); border: 1px solid var(--border); color: var(--text);
-      padding: 8px 12px; border-radius: 8px; font-size: 0.88rem; outline: none;
+      padding: 8px 12px; border-radius: var(--radius-md); font-size: 0.88rem; outline: none;
     }
     .field-group input:focus, .field-group select:focus { border-color: var(--accent); }
 
     /* ── DROP ZONE ── */
     #drop-zone {
-      border: 2px dashed var(--border); border-radius: 10px; padding: 32px 24px;
+      border: 2px dashed var(--border); border-radius: var(--radius-md); padding: 32px 24px;
       text-align: center; cursor: pointer; transition: border-color 0.15s, background 0.15s;
       background: var(--surface2);
     }
-    #drop-zone:hover, #drop-zone.drag-over { border-color: var(--accent); background: #7c83f510; }
+    #drop-zone:hover, #drop-zone.drag-over { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 6%, transparent); }
     #drop-zone .drop-icon { font-size: 2rem; }
     #drop-zone p { color: var(--muted); font-size: 0.9rem; margin-top: 8px; }
 
@@ -50,7 +51,7 @@
     .fq-empty { color: var(--muted); font-size: 0.85rem; text-align: center; padding: 8px 0; }
     .fq-row {
       display: flex; align-items: center; gap: 10px; padding: 12px 14px;
-      background: var(--surface2); border-radius: 8px; border: 1px solid var(--border);
+      background: var(--surface2); border-radius: var(--radius-md); border: 1px solid var(--border);
       /* keep everything on a single line so the remove button never drops
          and spacing stays predictable regardless of container width */
       flex-wrap: nowrap;
@@ -66,12 +67,12 @@
       overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
     .fq-badge {
-      font-size: 0.75rem; color: var(--green); background: #4caf9118;
-      border: 1px solid #4caf9140; border-radius: 20px; padding: 3px 10px;
+      font-size: 0.75rem; color: var(--green); background: color-mix(in srgb, var(--green) 10%, transparent);
+      border: 1px solid color-mix(in srgb, var(--green) 30%, transparent); border-radius: 20px; padding: 3px 10px;
       display: inline-block; flex: 0 0 140px; max-width: 140px;
       overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
-    .fq-badge.unknown { color: var(--red); background: #e05c5c18; border-color: #e05c5c40; }
+    .fq-badge.unknown { color: var(--red); background: color-mix(in srgb, var(--red) 10%, transparent); border-color: color-mix(in srgb, var(--red) 30%, transparent); }
 
     /* styled native select — matches index.html trigger aesthetic */
     .fq-select-wrap { position: relative; display: inline-block; }
@@ -82,7 +83,7 @@
     .fq-select {
       appearance: none; -webkit-appearance: none;
       background: var(--surface); border: 1px solid var(--border); color: var(--text);
-      padding: 7px 30px 7px 12px; border-radius: 8px; font-size: 0.82rem;
+      padding: 7px 30px 7px 12px; border-radius: var(--radius-md); font-size: 0.82rem;
       outline: none; cursor: pointer;
       flex: 0 0 200px;
       font-family: inherit;
@@ -91,7 +92,7 @@
     .fq-select:hover { border-color: var(--muted); }
     .fq-input {
       background: var(--surface); border: 1px solid var(--border); color: var(--text);
-      padding: 7px 12px; border-radius: 8px; font-size: 0.82rem; outline: none;
+      padding: 7px 12px; border-radius: var(--radius-md); font-size: 0.82rem; outline: none;
       min-width: 130px; font-family: inherit;
     }
     .fq-input:focus { border-color: var(--accent); }
@@ -118,10 +119,10 @@
       z-index: 500;
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 6px;
+      border-radius: var(--radius-sm);
       max-height: 180px;
       overflow-y: auto;
-      box-shadow: 0 4px 16px #00000055;
+      box-shadow: var(--shadow-md);
     }
     .autocomplete-list.open { display: block; }
     .autocomplete-item {
@@ -133,7 +134,7 @@
     .autocomplete-item:hover { background: var(--surface2); }
 
     /* ── BUTTONS ── */
-    .btn { padding: 9px 20px; border-radius: 8px; border: none; font-size: 0.88rem; font-weight: 600; cursor: pointer; transition: opacity 0.15s; }
+    .btn { padding: 9px 20px; border-radius: var(--radius-md); border: none; font-size: 0.88rem; font-weight: 600; cursor: pointer; transition: opacity 0.15s; }
     .btn:hover { opacity: 0.85; }
     .btn-primary { background: var(--accent); color: white; }
     .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
@@ -145,10 +146,10 @@
 
     /* ── PARSE ACTIONS ── */
     .parse-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-    .parse-error { color: var(--red); font-size: 0.82rem; display: none; padding: 8px 12px; background: #e05c5c18; border-radius: 6px; border: 1px solid #e05c5c44; }
+    .parse-error { color: var(--red); font-size: 0.82rem; display: none; padding: 8px 12px; background: color-mix(in srgb, var(--red) 10%, transparent); border-radius: var(--radius-sm); border: 1px solid color-mix(in srgb, var(--red) 25%, transparent); }
 
     /* ── SUMMARY BAR ── */
-    .summary-bar { display: flex; align-items: center; gap: 20px; padding: 10px 14px; background: var(--surface2); border-radius: 8px; flex-wrap: wrap; }
+    .summary-bar { display: flex; align-items: center; gap: 20px; padding: 10px 14px; background: var(--surface2); border-radius: var(--radius-md); flex-wrap: wrap; }
     .summary-bar .stat { display: flex; flex-direction: column; gap: 2px; }
     .summary-bar .stat-label { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
     .summary-bar .stat-value { font-size: 0.95rem; font-weight: 700; }
@@ -157,7 +158,7 @@
     .summary-bar .actions { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }
 
     /* ── PREVIEW TABLE ── */
-    .table-wrap { overflow-x: auto; border-radius: 9px; border: 1px solid var(--border); }
+    .table-wrap { overflow-x: auto; border-radius: var(--radius-md); border: 1px solid var(--border); }
     table { width: 100%; border-collapse: collapse; font-size: 0.83rem; }
     thead tr { background: var(--surface2); }
     th { padding: 9px 10px; text-align: left; color: var(--muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap; border-bottom: 1px solid var(--border); }
@@ -175,7 +176,7 @@
     .error-row td.date-cell { color: var(--red); }
 
     /* ── TOAST ── */
-    #toast { position: fixed; bottom: 24px; right: 24px; background: var(--surface); border: 1px solid var(--border); color: var(--text); padding: 10px 18px; border-radius: 9px; font-size: 0.85rem; box-shadow: 0 8px 24px #00000066; opacity: 0; pointer-events: none; transition: opacity 0.2s; z-index: 999; }
+    #toast { position: fixed; bottom: 24px; right: 24px; background: var(--surface); border: 1px solid var(--border); color: var(--text); padding: 10px 18px; border-radius: var(--radius-md); font-size: 0.85rem; box-shadow: var(--shadow-lg); opacity: 0; pointer-events: none; transition: opacity 0.2s; z-index: 999; }
     #toast.show { opacity: 1; }
 
     /* modal overlay for account config import */
@@ -187,13 +188,13 @@
     }
     .modal.show { visibility: visible; opacity: 1; }
     .modal-content {
-      background: var(--surface); padding: 20px; border-radius: 10px;
+      background: var(--surface); padding: 20px; border-radius: var(--radius-md);
       width: 90%; max-width: 500px;
     }
     .modal-content textarea {
       width: 100%; resize: vertical; background: var(--surface2);
       color: var(--text); border: 1px solid var(--border);
-      border-radius: 8px; padding: 8px;
+      border-radius: var(--radius-md); padding: 8px;
       font-family: inherit; font-size: 0.9rem;
     }
     .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px; }
@@ -218,7 +219,7 @@
     .date-range-pill {
       display: inline-flex; align-items: center; gap: 0;
       background: var(--surface2); border: 1px solid var(--border);
-      border-radius: 8px; padding: 0; overflow: hidden; transition: border-color 0.15s;
+      border-radius: var(--radius-md); padding: 0; overflow: hidden; transition: border-color 0.15s;
     }
     .date-range-pill:focus-within { border-color: var(--accent); }
     .date-range-pill .pill-icon { padding: 0 10px; color: var(--muted); font-size: 0.9rem; pointer-events: none; }
@@ -242,21 +243,179 @@
     .toggle-label input[type=checkbox] { accent-color: var(--accent); width: 14px; height: 14px; cursor: pointer; }
     .toggle-label:hover { color: var(--text); }
     #step-preview { display: none; }
+
+    /* ── INLINE TABLE COMBOBOX ── */
+    .td-combo { position: relative; min-width: 140px; }
+    .td-combo-input {
+      background: var(--surface2); color: var(--text);
+      border: 1px dashed var(--border);
+      font-size: 0.83rem; width: 100%; outline: none;
+      padding: 4px 8px; border-radius: var(--radius-sm); font-family: inherit;
+      transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+    }
+    .td-combo-input::placeholder { color: var(--muted); font-style: italic; opacity: 1; }
+    .td-combo-input:hover { border-color: var(--muted); border-style: solid; }
+    .td-combo-input:focus {
+      border-style: solid; border-color: var(--accent);
+      box-shadow: 0 0 0 2px #7c83f530;
+    }
+    .td-combo-list {
+      display: none; position: absolute; top: calc(100% + 2px); left: 0;
+      min-width: 200px; z-index: 600;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); max-height: 200px; overflow-y: auto;
+      box-shadow: var(--shadow-md);
+    }
+    .td-combo-list.open { display: block; }
+    .td-combo-item { padding: 7px 12px; font-size: 0.82rem; cursor: pointer; color: var(--text); }
+    .td-combo-item:hover { background: var(--surface2); }
+
+    /* ── TAGS CONTENTEDITABLE ── */
+    td.tags-cell { min-width: 140px; }
+    td.tags-cell [contenteditable] {
+      display: block; min-width: 120px; padding: 4px 8px;
+      border-radius: var(--radius-sm); border: 1px dashed var(--border);
+      background: var(--surface2);
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    td.tags-cell [contenteditable]:hover { border-color: var(--muted); border-style: solid; }
+    td.tags-cell [contenteditable]:focus {
+      border-style: solid; border-color: var(--accent);
+      box-shadow: 0 0 0 2px #7c83f530;
+    }
+    /* placeholder for empty contenteditable */
+    td.tags-cell [contenteditable][data-placeholder]:empty::before {
+      content: attr(data-placeholder);
+      color: var(--muted); font-style: italic; pointer-events: none;
+    }
+
+    /* ── PROC HEADER (sticky top-bar style) ── */
+    #proc-main > header {
+      position: sticky; top: 0; z-index: 100;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 28px;
+      display: flex; align-items: center; gap: 12px;
+      margin-bottom: 0;
+    }
+    #proc-main > header .header-right {
+      margin-left: auto; display: flex; align-items: center; gap: 8px;
+    }
+
+    /* ── TD COMBO (category/subcategory inline combobox) ── */
+    .td-combo { position: relative; min-width: 120px; }
+    .td-combo-input {
+      width: 100%; background: transparent; border: none; border-bottom: 1.5px solid var(--border);
+      color: var(--text); font-size: 0.82rem; font-family: inherit;
+      padding: 2px 4px; outline: none; border-radius: 0;
+    }
+    .td-combo-input:focus { border-bottom-color: var(--accent); background: color-mix(in srgb, var(--accent) 5%, transparent); }
+    .td-combo-list {
+      display: none; position: absolute; top: 100%; left: 0; right: 0; z-index: 500;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); max-height: 180px; overflow-y: auto;
+      box-shadow: var(--shadow-md);
+    }
+    .td-combo-list.open { display: block; }
+    .td-combo-item { padding: 6px 10px; font-size: 0.82rem; cursor: pointer; color: var(--text); }
+    .td-combo-item:hover { background: var(--surface2); }
+
+    /* ── CONFIG MODAL CONTENT ── */
+    .modal-content {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 24px 28px;
+      width: 520px; max-width: 96vw; max-height: 85vh; overflow-y: auto;
+      box-shadow: var(--shadow-lg);
+    }
+    .modal-content h3 { font-size: 1rem; font-weight: 700; margin-bottom: 12px; }
+    .modal-content textarea {
+      width: 100%; background: var(--surface2); border: 1.5px solid var(--border);
+      color: var(--text); border-radius: var(--radius-md); padding: 10px 12px;
+      font-size: 0.82rem; font-family: monospace; outline: none; resize: vertical;
+    }
+    .modal-content textarea:focus { border-color: var(--accent); }
+    .modal-actions { display: flex; gap: 8px; margin-top: 12px; justify-content: flex-end; }
+    .config-status-badge {
+      font-size: 0.78rem; color: var(--green);
+      background: color-mix(in srgb, var(--green) 10%, transparent);
+      border: 1px solid color-mix(in srgb, var(--green) 30%, transparent);
+      border-radius: 20px; padding: 3px 10px; display: inline-block;
+    }
+    .config-status-badge a { color: var(--green); }
+
+    /* ── DATE RANGE PILL ── */
+    .date-range-pill {
+      display: flex; align-items: center; gap: 6px;
+      background: var(--surface2); border: 1.5px solid var(--border);
+      border-radius: var(--radius-md); padding: 6px 12px; flex-wrap: nowrap;
+    }
+    .date-range-pill:focus-within { border-color: var(--accent); }
+    .date-range-pill input[type=date] {
+      background: transparent; border: none; color: var(--text);
+      font-size: 0.85rem; font-family: inherit; outline: none; min-width: 120px;
+    }
+    .pill-icon { color: var(--muted); font-size: 0.9rem; }
+    .pill-sep { color: var(--muted); }
+    .date-range-clear {
+      background: none; border: none; cursor: pointer; color: var(--muted);
+      font-size: 0.85rem; padding: 1px 4px; border-radius: 4px; line-height: 1;
+    }
+    .date-range-clear:hover { color: var(--red); }
+
+    /* ── AUTH GUARD SCREEN ── */
+    .proc-auth-icon { font-size: 2.5rem; }
+    .proc-back-btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--accent); color: #fff; text-decoration: none;
+      padding: 11px 22px; border-radius: var(--radius-md);
+      font-size: 0.95rem; font-weight: 600; font-family: inherit;
+      transition: background var(--transition), box-shadow var(--transition);
+      box-shadow: 0 1px 3px color-mix(in srgb, var(--accent) 40%, transparent);
+    }
+    .proc-back-btn:hover {
+      background: var(--accent-h);
+      box-shadow: 0 4px 12px color-mix(in srgb, var(--accent) 30%, transparent);
+    }
+    .toggle-label { display: flex; align-items: center; gap: 6px; font-size: 0.82rem; color: var(--muted); cursor: pointer; }
+    .toggle-label input[type=checkbox] { accent-color: var(--accent); }
   </style>
 </head>
+
 <body>
 
+<!-- ── AUTH GUARD SCREEN (shown when not authenticated) ── -->
+<div id="auth-screen" style="display:none">
+  <div class="login-card">
+    <button class="theme-toggle" data-theme-toggle aria-label="Toggle theme"></button>
+    <div class="proc-auth-icon">📄</div>
+    <h1 style="font-size:1.4rem;">Transaction Processor</h1>
+    <p>You need to be signed in to access this page.</p>
+    <a href="./index.html" class="proc-back-btn">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+      Go to Dashboard &amp; Sign In
+    </a>
+  </div>
+</div>
+
+<!-- ── MAIN PROCESSOR APP (hidden until auth check passes) ── -->
+<div id="proc-main" style="display:none">
+
 <header>
-  <a href="./index.html">&#x2190; Dashboard</a>
-  <span class="sep">|</span>
-  <h1>&#x1F4C4; Transaction Processor</h1>
+  <nav class="header-nav">
+    <a href="./index.html" class="nav-link">&#x2190; Dashboard</a>
+  </nav>
+  <span class="sep" style="color:var(--border)">|</span>
+  <h1 style="font-size:1.05rem;font-weight:700;color:var(--text)">&#x1F4C4; Transaction Processor</h1>
+  <div class="header-right">
+    <button class="theme-toggle" data-theme-toggle aria-label="Toggle theme"></button>
+  </div>
 </header>
 
 <main>
 
   <!-- ── STEP 1: GLOBAL DEFAULTS ── -->
   <div class="section" id="step-defaults">
-    <h2>1 · Global Defaults</h2>
+    <h2>1 &middot; Global Defaults</h2>
     <div class="fields-row">
       <div class="field-group">
         <label>Date Range <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:0.78rem">(filters all files)</span></label>
@@ -272,7 +431,7 @@
         <label>&nbsp;</label>
         <button class="btn btn-secondary" id="accounts-config-btn" style="flex: 1; line-height: 1;">&#x2699;&#xFE0F; Config</button>
         <div id="config-loaded-status" style="display:none;">
-          <span class="config-status-badge">&#x2713; Loaded <span id="config-account-count"></span> account configs &middot; <a href="#" id="config-view-link">View</a></span>
+          <span class="config-status-badge">&#x2713; <span id="config-account-count"></span> accounts &middot; <span id="config-source-label"></span> &middot; <a href="#" id="config-view-link">View / Edit</a></span>
         </div>
       </div>
     </div>
@@ -280,7 +439,7 @@
 
   <!-- ── STEP 2: ADD FILES ── -->
   <div class="section" id="step-input">
-    <h2>2 · Add CSV Files</h2>
+    <h2>2 &middot; Add CSV Files</h2>
     <div id="drop-zone">
       <div class="drop-icon">&#x1F4C2;</div>
       <p>Drop CSV files here, or <strong>click to browse</strong></p>
@@ -299,7 +458,7 @@
 
   <!-- ── STEP 3: PREVIEW ── -->
   <div class="section" id="step-preview">
-    <h2>3 · Review &amp; Edit</h2>
+    <h2>3 &middot; Review &amp; Edit</h2>
     <div class="summary-bar" id="summary-bar">
       <div class="stat"><span class="stat-label">Rows</span><span class="stat-value" id="stat-rows">&#x2014;</span></div>
       <div class="stat"><span class="stat-label">Total Expenses</span><span class="stat-value negative" id="stat-expenses">&#x2014;</span></div>
@@ -318,7 +477,7 @@
           <tr>
             <th>#</th><th>Date</th><th>Description</th>
             <th style="text-align:right">Amount</th>
-            <th>Account</th><th>Category</th><th>Owner</th><th></th>
+            <th>Account</th><th>Category</th><th>Subcategory</th><th>Tags</th><th>Owner</th><th></th>
           </tr>
         </thead>
         <tbody id="preview-tbody"></tbody>
@@ -329,7 +488,9 @@
 
 </main>
 
-<!-- configuration import modal -->
+</div><!-- /#proc-main -->
+
+<!-- ── CONFIGURATION IMPORT MODAL ── -->
 <div id="config-modal" class="modal">
   <div class="modal-content">
     <h3>Import Configuration</h3>
@@ -347,7 +508,30 @@
 </div>
 
 <div id="toast"></div>
+
+<script type="module">
+import { initTheme } from './theme.js';
+initTheme();
+</script>
+
 <script>
+// ── AUTH GUARD ───────────────────────────────────────────────────────────────
+(function checkAuth() {
+  const token = sessionStorage.getItem('gapi_access_token');
+  const authScreen = document.getElementById('auth-screen');
+  const procMain   = document.getElementById('proc-main');
+  if (!token) {
+    authScreen.style.display = 'flex';
+    procMain.style.display   = 'none';
+  } else {
+    authScreen.style.display = 'none';
+    procMain.style.display   = 'block';
+    document.addEventListener('DOMContentLoaded', () => autoLoadConfig());
+    if (document.readyState !== 'loading') autoLoadConfig();
+  }
+})();
+
+
 const ADAPTERS = {
   capital_one: {
     label: 'Capital One Credit Card', dateCol: 'posted date', descCol: 'description',
@@ -461,7 +645,7 @@ function transformRows(csvRows, adapterId, globalAccount, globalOwner) {
     if (!rawDate && amount === 0) return null;
     return {
       date: normalizeDate(rawDate), description: getCol(row, adapter.descCol),
-      amount, category: getCol(row, adapter.categoryCol) || '',
+      amount, category: '', subcategory: '', tags: '',
       account:      globalAccount || getCol(row, adapter.accountCol) || '',
       accountOwner: globalOwner   || getCol(row, adapter.ownerCol)   || '',
       notes: getCol(row, adapter.notesCol) || '',
@@ -494,26 +678,119 @@ function fmt(n) { return (n < 0 ? '-' : '') + '$' + Math.abs(n).toFixed(2).repla
 function esc(s) { return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 let parsedRows = [];
+let categoryConfig = [];
+
+function getSubcategoryOptions(categoryName) {
+  const cat = categoryConfig.find(c => c.name === categoryName);
+  return cat ? cat.subcategories.map(s => s.name) : [];
+}
+
+function attachComboToCell(td, initialValue, optionsFn, idx, field) {
+  td.classList.add('td-combo');
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'td-combo-input';
+  input.value = initialValue;
+  input.dataset.idx = idx;
+  input.dataset.field = field;
+  input.autocomplete = 'off';
+  input.placeholder = field === 'category' ? 'Category…' : 'Subcategory…';
+  const list = document.createElement('div');
+  list.className = 'td-combo-list';
+  td.appendChild(input);
+  td.appendChild(list);
+
+  function renderList(items) {
+    list.innerHTML = items.map(v => `<div class="td-combo-item">${esc(v)}</div>`).join('');
+    list.classList.toggle('open', items.length > 0);
+    list.querySelectorAll('.td-combo-item').forEach(item => {
+      item.addEventListener('mousedown', e => {
+        e.preventDefault();
+        input.value = item.textContent;
+        list.classList.remove('open');
+        parsedRows[idx][field] = item.textContent;
+        if (field === 'category') {
+          parsedRows[idx].subcategory = '';
+          const subInput = document.querySelector(`.td-combo-input[data-idx="${idx}"][data-field="subcategory"]`);
+          if (subInput) subInput.value = '';
+        }
+        updateSummary();
+      });
+    });
+  }
+
+  input.addEventListener('focus', () => {
+    const q = input.value.toLowerCase();
+    renderList(optionsFn().filter(v => v.toLowerCase().includes(q)));
+  });
+  input.addEventListener('input', () => {
+    const q = input.value.toLowerCase();
+    renderList(optionsFn().filter(v => v.toLowerCase().includes(q)));
+    parsedRows[idx][field] = input.value;
+    if (field === 'category') {
+      parsedRows[idx].subcategory = '';
+      const subInput = document.querySelector(`.td-combo-input[data-idx="${idx}"][data-field="subcategory"]`);
+      if (subInput) subInput.value = '';
+    }
+    updateSummary();
+  });
+  input.addEventListener('blur', () => {
+    setTimeout(() => list.classList.remove('open'), 150);
+    parsedRows[idx][field] = input.value;
+  });
+  return input;
+}
 
 function renderPreview(rows) {
   parsedRows = rows;
   const tbody = document.getElementById('preview-tbody');
   tbody.innerHTML = '';
+  const catNames = categoryConfig.map(c => c.name);
+
   rows.forEach((r, i) => {
     const tr = document.createElement('tr');
     if (!r.date || r.date === '') tr.classList.add('error-row');
-    tr.innerHTML = `
+
+    // Static cells
+    const staticFrag = document.createElement('template');
+    staticFrag.innerHTML = `
       <td class="row-num">${i+1}</td>
       <td class="date-cell">${esc(r.date)}</td>
       <td><span contenteditable="true" data-field="description" data-idx="${i}">${esc(r.description)}</span></td>
       <td class="amount-cell"><span contenteditable="true" data-field="amount" data-idx="${i}">${r.amount.toFixed(2)}</span></td>
       <td><span contenteditable="true" data-field="account" data-idx="${i}">${esc(r.account)}</span></td>
-      <td><span contenteditable="true" data-field="category" data-idx="${i}">${esc(r.category)}</span></td>
-      <td><span contenteditable="true" data-field="accountOwner" data-idx="${i}">${esc(r.accountOwner)}</span></td>
-      <td><button class="btn-danger" data-del="${i}" title="Remove row">&#x2715;</button></td>
     `;
+    tr.append(staticFrag.content);
+
+    // Category combobox
+    const catTd = document.createElement('td');
+    attachComboToCell(catTd, r.category || '', () => catNames, i, 'category');
+    tr.appendChild(catTd);
+
+    // Subcategory combobox (options depend on currently selected category)
+    const subTd = document.createElement('td');
+    attachComboToCell(subTd, r.subcategory || '', () => getSubcategoryOptions(parsedRows[i].category || ''), i, 'subcategory');
+    tr.appendChild(subTd);
+
+    // Tags cell (comma-separated, free text)
+    const tagsTd = document.createElement('td');
+    tagsTd.className = 'tags-cell';
+    tagsTd.innerHTML = `<span contenteditable="true" data-field="tags" data-idx="${i}" data-placeholder="#tags (comma-separated)">${esc(r.tags || '')}</span>`;
+    tr.appendChild(tagsTd);
+
+    // Owner
+    const ownerTd = document.createElement('td');
+    ownerTd.innerHTML = `<span contenteditable="true" data-field="accountOwner" data-idx="${i}">${esc(r.accountOwner)}</span>`;
+    tr.appendChild(ownerTd);
+
+    // Delete button
+    const delTd = document.createElement('td');
+    delTd.innerHTML = `<button class="btn-danger" data-del="${i}" title="Remove row">&#x2715;</button>`;
+    tr.appendChild(delTd);
+
     tbody.appendChild(tr);
   });
+
   tbody.querySelectorAll('[contenteditable]').forEach(el => {
     el.addEventListener('input', () => {
       const idx = parseInt(el.dataset.idx), field = el.dataset.field, val = el.textContent.trim();
@@ -542,18 +819,18 @@ function updateSummary() {
   netEl.className = 'stat-value ' + (net >= 0 ? 'positive' : 'negative');
 }
 
-const OUTPUT_HEADERS = ['Date','Description','Amount','Account','Category','Account Owner'];
+const OUTPUT_HEADERS = ['Date','Description','Amount','Account','Category','Subcategory','Tags','Account Owner'];
 
 function rowsToTSV(rows, includeHeader=true) {
   const lines = includeHeader ? [OUTPUT_HEADERS.join('\t')] : [];
-  rows.forEach(r => lines.push([r.date,r.description,r.amount.toFixed(2),r.account,r.category,r.accountOwner].map(v=>String(v).replace(/\t/g,' ')).join('\t')));
+  rows.forEach(r => lines.push([r.date,r.description,r.amount.toFixed(2),r.account,r.category,r.subcategory||'',r.tags||'',r.accountOwner].map(v=>String(v).replace(/\t/g,' ')).join('\t')));
   return lines.join('\n');
 }
 
 function rowsToCSV(rows, includeHeader=true) {
   const q = v => { const s=String(v); return (s.includes(',')||s.includes('"')||s.includes('\n')) ? '"'+s.replace(/"/g,'""')+'"' : s; };
   const lines = includeHeader ? [OUTPUT_HEADERS.map(q).join(',')] : [];
-  rows.forEach(r => lines.push([r.date,r.description,r.amount.toFixed(2),r.account,r.category,r.accountOwner].map(q).join(',')));
+  rows.forEach(r => lines.push([r.date,r.description,r.amount.toFixed(2),r.account,r.category,r.subcategory||'',r.tags||'',r.accountOwner].map(q).join(',')));
   return lines.join('\n');
 }
 
@@ -567,7 +844,7 @@ function showError(el, msg) { el.textContent = '\u26A0 ' + msg; el.style.display
 
 document.getElementById('copy-tsv-btn').addEventListener('click', () => {
   if (!parsedRows.length) return;
-  document.querySelectorAll('[data-field]').forEach(el => {
+  document.querySelectorAll('[data-field][contenteditable]').forEach(el => {
     const idx=parseInt(el.dataset.idx), field=el.dataset.field;
     if (idx>=0 && idx<parsedRows.length) {
       if (field==='amount') parsedRows[idx].amount = parseFloat(el.textContent.trim()) || 0;
@@ -603,30 +880,157 @@ document.getElementById('date-range-clear').addEventListener('click', () => {
 // ─── FILE QUEUE ───────────────────────────────────────────────────────────────
 let fileQueue = [];
 
-// account configuration imported by user
+// ── CONFIG STATE ──────────────────────────────────────────────────────────────
 let loadedConfigJson = null;
-let accountOptions = [];
+let accountOptions   = [];
+let configSource     = null; // 'gsheet' | 'json' | 'user-input'
 
+const CONFIG_SHEET_TABS = { accounts: 'CONFIG.accounts', categories: 'CONFIG.categories' };
+
+// ── CONFIG BADGE ──────────────────────────────────────────────────────────────
 function updateConfigBadge() {
   const statusEl = document.getElementById('config-loaded-status');
   const countEl  = document.getElementById('config-account-count');
+  const sourceEl = document.getElementById('config-source-label');
+  const viewLink = document.getElementById('config-view-link');
   if (!statusEl) return;
   if (accountOptions.length > 0) {
-    countEl.textContent = accountOptions.length;
+    const SOURCE_LABELS = {
+      'gsheet':     '&#x1F4CA; Google Sheet',
+      'json':       '&#x1F4C4; config.json',
+      'user-input': '&#x270F;&#xFE0F; User Input',
+    };
+    if (countEl)  countEl.textContent = accountOptions.length;
+    if (sourceEl) sourceEl.innerHTML  = SOURCE_LABELS[configSource] || configSource || '';
+
+    // ── Link behaviour depends on source ──────────────────────────────────────
+    if (viewLink) {
+      if (configSource === 'gsheet') {
+        const sheetId = sessionStorage.getItem('gapi_sheet_id');
+        viewLink.href        = `https://docs.google.com/spreadsheets/d/${sheetId}`;
+        viewLink.target      = '_blank';
+        viewLink.rel         = 'noopener noreferrer';
+        viewLink.textContent = 'Open Sheet ↗';
+      } else {
+        viewLink.href        = '#';
+        viewLink.target      = '';
+        viewLink.rel         = '';
+        viewLink.textContent = 'View / Edit';
+      }
+    }
+
     statusEl.style.display = 'block';
   } else {
     statusEl.style.display = 'none';
   }
 }
 
-function loadAccountConfigObject(obj, rawJson) {
+// ── AUTO CONFIG LOAD: Google Sheet → config.json → manual fallback ────────────
+async function autoLoadConfig() {
+  const token   = sessionStorage.getItem('gapi_access_token');
+  const sheetId = sessionStorage.getItem('gapi_sheet_id');
+
+  if (token && sheetId) {
+    const ok = await tryLoadFromSheet(token, sheetId);
+    if (ok) return;
+  }
+
+  const ok = await tryLoadFromConfigJson();
+  if (ok) return;
+
+  updateConfigBadge();
+}
+
+async function tryLoadFromSheet(token, sheetId) {
+  try {
+    const [accountRows, categoryRows] = await Promise.all([
+      fetchConfigTab(token, sheetId, CONFIG_SHEET_TABS.accounts),
+      fetchConfigTab(token, sheetId, CONFIG_SHEET_TABS.categories),
+    ]);
+    const accounts   = parseAccountRows(accountRows);
+    const categories = parseCategoryRows(categoryRows);
+    if (!accounts.length && !categories.length) {
+      console.warn('[config] Sheet tabs empty — falling back to config.json');
+      return false;
+    }
+    accountOptions = accounts;
+    categoryConfig = categories;
+    configSource   = 'gsheet';
+    updateConfigBadge();
+    showToast('Config loaded from Google Sheet');
+    return true;
+  } catch(e) {
+    console.warn('[config] Sheet load error:', e);
+    return false;
+  }
+}
+
+async function fetchConfigTab(token, sheetId, tabName) {
+  const range = encodeURIComponent(`${tabName}!A:Z`);
+  const url   = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${range}`;
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) return [];
+  const json = await res.json();
+  return json.values || [];
+}
+
+function parseAccountRows(rows) {
+  if (!rows || rows.length < 2) return [];
+  const headers = rows[0].map(h => h.trim().toLowerCase());
+  const col = name => headers.indexOf(name);
+  if (col('name') === -1) return [];
+  return rows.slice(1).map(r => ({
+    name:        (r[col('name')]         || '').trim(),
+    owner:       (r[col('owner')]        || '').trim(),
+    type:        (r[col('type')]         || '').trim(),
+    description: (r[col('description')]  || '').trim(),
+  })).filter(a => a.name);
+}
+
+function parseCategoryRows(rows) {
+  if (!rows || rows.length < 2) return [];
+  const headers = rows[0].map(h => h.trim().toLowerCase());
+  const col = name => headers.indexOf(name);
+  if (col('category_id') === -1 || col('category_name') === -1) return [];
+  const map = new Map();
+  rows.slice(1).forEach(r => {
+    const catId   = (r[col('category_id')]      || '').trim();
+    const catName = (r[col('category_name')]    || '').trim();
+    const subId   = (r[col('subcategory_id')]   || '').trim();
+    const subName = (r[col('subcategory_name')] || '').trim();
+    if (!catId) return;
+    if (!map.has(catId)) map.set(catId, { id: catId, name: catName, subcategories: [] });
+    if (subId && subName) map.get(catId).subcategories.push({ id: subId, name: subName });
+  });
+  return [...map.values()];
+}
+
+async function tryLoadFromConfigJson() {
+  try {
+    const res = await fetch('./config.json');
+    if (!res.ok) { return false; }
+    const obj = await res.json();
+    if (!obj?.options?.accounts?.length) { return false; }
+    loadAccountConfigObject(obj, JSON.stringify(obj, null, 2), 'json');
+    return true;
+  } catch(e) {
+    return false;
+  }
+}
+
+autoLoadConfig();
+
+// ── LOAD FROM OBJECT (JSON paste / file upload) ───────────────────────────────
+function loadAccountConfigObject(obj, rawJson, source = 'user-input') {
   try {
     if (!obj || !obj.options || !Array.isArray(obj.options.accounts))
       throw new Error('JSON must contain options.accounts array');
     accountOptions = obj.options.accounts.map(a => ({
       name: a.name, owner: a.owner, type: a.type, description: a.description
     })).filter(a => a.name);
+    if (Array.isArray(obj.options.categories)) categoryConfig = obj.options.categories;
     loadedConfigJson = rawJson || JSON.stringify(obj, null, 2);
+    configSource     = source;
     fileQueue.forEach(f => {
       const m = accountOptions.find(a => a.name === f.account);
       if (m) f.owner = m.owner;
@@ -793,7 +1197,7 @@ const cfgLoad = document.getElementById('config-load-btn');
 if (cfgLoad) cfgLoad.addEventListener('click', () => {
   try {
     const obj = JSON.parse(document.getElementById('config-text').value);
-    loadAccountConfigObject(obj, document.getElementById('config-text').value);;
+    loadAccountConfigObject(obj, document.getElementById('config-text').value, 'user-input');
     showConfigModal(false);
   } catch (e) {
     showError(document.getElementById('config-error'), e.message);
@@ -823,6 +1227,7 @@ if (cfgFileInput) cfgFileInput.addEventListener('change', e => {
 const viewLink = document.getElementById('config-view-link');
 if (viewLink) {
   viewLink.addEventListener('click', e => {
+    if (configSource === 'gsheet') return;
     e.preventDefault();
     showConfigModal(true);
     if (loadedConfigJson) {
@@ -865,20 +1270,6 @@ document.getElementById('process-btn').addEventListener('click', () => {
   }
   renderPreview(filtered);
 });
-
-async function autoLoadConfig() {
-    try {
-      const res = await fetch('./config.json');
-      if (!res.ok) return;               
-      const obj = await res.json();
-      if (obj && obj.options && Array.isArray(obj.options.accounts)) {
-        const rawJson = JSON.stringify(obj, null, 2);
-        loadAccountConfigObject(obj, rawJson);
-      }
-    } catch { }
-  }
-  autoLoadConfig();
-
 </script>
 </body>
 </html>
