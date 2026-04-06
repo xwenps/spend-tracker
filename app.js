@@ -181,25 +181,6 @@ window.addEventListener('load', async () => {
       settingsToggle.textContent = isOpen ? '✕ hide setup' : '⚙ manual setup';
     });
   }
-  initAllMultiSelects();
-  document.getElementById('cat-type-btn').addEventListener('click', () => {
-    document.getElementById('cat-type-overlay').style.display = 'flex';
-  });
-  document.getElementById('cat-type-close').addEventListener('click', () => {
-    document.getElementById('cat-type-overlay').style.display = 'none';
-  });
-  document.getElementById('cat-type-overlay').addEventListener('click', (e) => {
-    if (e.target === document.getElementById('cat-type-overlay'))
-      document.getElementById('cat-type-overlay').style.display = 'none';
-  });
-  document.getElementById('freq-toggle').addEventListener('click', e => {
-    const btn = e.target.closest('.freq-btn');
-    if (!btn) return;
-    chartFreq = btn.dataset.freq;
-    document.querySelectorAll('.freq-btn').forEach(b => b.classList.toggle('active', b === btn));
-    updateChartTitles();
-    renderCharts();
-  });
 });
 
 // ─── AUTH ─────────────────────────────────────────────────────────────────────
@@ -238,6 +219,43 @@ function showAuthError(msg) {
 }
 
 // ─── DATA FETCHING ────────────────────────────────────────────────────────────
+let appButtonsWired = false;
+
+function wireAppButtons() {
+  if (appButtonsWired) return;
+  appButtonsWired = true;
+  initAllMultiSelects();
+
+  document.getElementById('cat-type-btn').addEventListener('click', () => {
+    document.getElementById('cat-type-overlay').style.display = 'flex';
+  });
+  document.getElementById('cat-type-close').addEventListener('click', () => {
+    document.getElementById('cat-type-overlay').style.display = 'none';
+  });
+  document.getElementById('cat-type-overlay').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('cat-type-overlay'))
+      document.getElementById('cat-type-overlay').style.display = 'none';
+  });
+  document.getElementById('freq-toggle').addEventListener('click', e => {
+    const btn = e.target.closest('.freq-btn');
+    if (!btn) return;
+    chartFreq = btn.dataset.freq;
+    document.querySelectorAll('.freq-btn').forEach(b => b.classList.toggle('active', b === btn));
+    updateChartTitles();
+    renderCharts();
+  });
+  document.getElementById('refresh-btn').addEventListener('click', () => {
+    const sheetId = sessionStorage.getItem('gapi_sheet_id');
+    if (sheetId && accessToken) loadAllData(sheetId);
+  });
+  document.getElementById('signout-btn').addEventListener('click', () => {
+    sessionStorage.removeItem('gapi_access_token');
+    sessionStorage.removeItem('gapi_sheet_id');
+    sessionStorage.removeItem('gapi_user_profile');
+    location.reload();
+  });
+}
+
 async function discoverSheetTabs(sheetId) {
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}?fields=sheets.properties.title`;
   const res  = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
@@ -329,6 +347,7 @@ async function loadAllData(sheetId) {
   document.getElementById('app').style.display = 'block';
   populateFilters();
   applyFiltersAndRender();
+  wireAppButtons();
 }
 
 
@@ -732,18 +751,6 @@ document.getElementById('next-btn').addEventListener('click', () => { currentPag
 document.getElementById('search-input').addEventListener('input', () => {
   currentPage = 1;
   renderTable();
-});
-
-document.getElementById('refresh-btn').addEventListener('click', () => {
-  const sheetId = document.getElementById('sheet-id-input').value.trim();
-  if (sheetId && accessToken) loadAllData(sheetId);
-});
-
-document.getElementById('signout-btn').addEventListener('click', () => {
-  sessionStorage.removeItem('gapi_access_token');
-  sessionStorage.removeItem('gapi_sheet_id');
-  sessionStorage.removeItem('gapi_user_profile');
-  location.reload();
 });
 
 // ─── UTILS ────────────────────────────────────────────────────────────────────
