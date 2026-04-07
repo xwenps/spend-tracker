@@ -116,6 +116,9 @@ let sortDir = 'desc';
 let currentPage = 1;
 const PAGE_SIZE = 25;
 let charts = {};
+let categoryMap = {};
+let subcategoryMap = {}; 
+let activeDrillCategory = null;
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const PALETTE = [
@@ -244,6 +247,11 @@ function wireAppButtons() {
     updateChartTitles();
     renderCharts();
   });
+  document.getElementById('drill-close').addEventListener('click', () => {
+    document.getElementById('subcategory-drill-card').style.display = 'none';
+    destroyChart('subDrill');
+    activeDrillCategory = null;
+  });
   document.getElementById('refresh-btn').addEventListener('click', () => {
     const sheetId = sessionStorage.getItem('gapi_sheet_id');
     if (sheetId && accessToken) loadAllData(sheetId);
@@ -276,9 +284,38 @@ async function discoverSheetTabs(sheetId) {
   return json.sheets.map(s => s.properties.title);
 }
 
+async function loadCategoryMap(sheetId) {
+  try {
+    const range = encodeURIComponent('CONFIG.categories!A:Z');
+    const url   = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${range}`;
+    const res   = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
+    if (!res.ok) return;
+    const rows  = (await res.json()).values;
+    if (!rows || rows.length < 2) return;
+    const headers = rows[0].map(h => h.trim().toLowerCase());
+    const col = name => headers.indexOf(name);
+    if (col('category_id') === -1) return;
+    rows.slice(1).forEach(r => {
+      const catId   = (r[col('category_id')]      || '').trim();
+      const catName = (r[col('category_name')]    || '').trim();
+      const subId   = (r[col('subcategory_id')]   || '').trim();
+      const subName = (r[col('subcategory_name')] || '').trim();
+      if (catId && catName) categoryMap[catId] = catName;
+      if (catId && subId && subName) subcategoryMap[`${catId}::${subId}`] = subName;
+    });
+    console.log('[category] map loaded:', Object.keys(categoryMap).length, 'categories');
+  } catch(e) {
+    console.warn('Could not load CONFIG.categories:', e);
+  }
+}
+
 async function loadAllData(sheetId) {
   document.getElementById('auth-screen').style.display = 'none';
   document.getElementById('loading').style.display = 'block';
+
+  categoryMap    = {};
+  subcategoryMap = {};
+  await loadCategoryMap(sheetId);
 
   // Get Data from either Config File or only tabs named as 4-digit years only (e.g. "2020", "2021", etc.)
   const allTabs = await discoverSheetTabs(sheetId);
@@ -288,7 +325,7 @@ async function loadAllData(sheetId) {
   const results = await Promise.all(
     sheetTabs.map(async tab => {
       try {
-        const range = encodeURIComponent(`${tab}!A:H`);
+        const range = encodeURIComponent(`${tab}!A:Z`);
         const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${range}`;
         const res = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
         console.log(`Tab "${tab}" → HTTP ${res.status}`);
@@ -301,34 +338,50 @@ async function loadAllData(sheetId) {
         const headers = rows[0].map(h => h.trim().toLowerCase());
         console.log(`Tab "${tab}" → headers:`, headers);
         const idx = {
-          date:         headers.indexOf('date'),
-          description:  headers.indexOf('description'),
-          amount:       headers.indexOf('amount'),
-          account:      headers.indexOf('account'),
-          category:     headers.indexOf('category'),
-          month:        headers.indexOf('month'),
-          accountOwner: headers.indexOf('account owner'),
-          notes:        headers.indexOf('notes'),
+          date:          headers.indexOf('date'),
+          description:   headers.indexOf('description'),
+          amount:        headers.indexOf('amount'),
+          account:       headers.indexOf('account'),
+          accountOwner:  headers.indexOf('account owner'),
+          notes:         headers.indexOf('notes'),
+          categoryId:    headers.indexOf('category_id'),
+          subcategoryId: headers.indexOf('subcategory_id'),
+          tags:          headers.indexOf('tags'),
         };
 
         return rows.slice(1).flatMap(r => {
           const amount = parseFloat((r[idx.amount] || '0').replace(/[$,]/g, ''));
           if (!r[idx.date] || isNaN(amount) || amount === 0) return [];
-          const parts = r[idx.date].split('/');
+          const parts   = r[idx.date].split('/');
           const dateObj = parts.length === 3
             ? new Date(parseInt(parts[2]), parseInt(parts[0]) - 1, parseInt(parts[1]))
             : null;
+
+          const rawCatId = idx.categoryId    >= 0 ? (r[idx.categoryId]    || '').trim() : '';
+          const rawSubId = idx.subcategoryId >= 0 ? (r[idx.subcategoryId] || '').trim() : '';
+          const rawTags  = idx.tags          >= 0 ? (r[idx.tags]          || '').trim() : '';
+
+          const category  = (rawCatId && categoryMap[rawCatId])
+            ? categoryMap[rawCatId] : (rawCatId || 'Uncategorized');
+          const subcategory = (rawCatId && rawSubId && subcategoryMap[`${rawCatId}::${rawSubId}`])
+            ? subcategoryMap[`${rawCatId}::${rawSubId}`] : (rawSubId || '');
+          const tags = rawTags ? rawTags.split(',').map(t => t.trim()).filter(Boolean) : [];
+
           return [{
-            date:         r[idx.date] || '',
+            date:         r[idx.date]        || '',
             dateObj,
-            year:         dateObj ? dateObj.getFullYear() : null,
+            year:         dateObj ? dateObj.getFullYear()  : null,
             monthNum:     dateObj ? dateObj.getMonth() + 1 : null,
-            description:  r[idx.description] || '',
+            description:  idx.description  >= 0 ? (r[idx.description]  || '') : '',
             amount,
-            account:      idx.account      >= 0 ? (r[idx.account]      || '')               : '',
-            category:     idx.category     >= 0 ? (r[idx.category]     || 'Uncategorized')  : 'Uncategorized',
-            accountOwner: idx.accountOwner >= 0 ? (r[idx.accountOwner] || '')               : '',
-            notes:        idx.notes        >= 0 ? (r[idx.notes]        || '')               : '',
+            account:      idx.account      >= 0 ? (r[idx.account]      || '') : '',
+            accountOwner: idx.accountOwner >= 0 ? (r[idx.accountOwner] || '') : '',
+            notes:        idx.notes        >= 0 ? (r[idx.notes]        || '') : '',
+            categoryId:   rawCatId,
+            category,         // display name — used everywhere existing code references r.category
+            subcategoryId: rawSubId,
+            subcategory,
+            tags,
           }];
         });
 
@@ -367,6 +420,9 @@ function populateFilters() {
   const cats = [...new Set(allData.map(r => r.category))].sort();
   populateMSOptions('cat', cats.map(c => ({ value: c, label: c })));
 
+  const allTags = [...new Set(allData.flatMap(r => r.tags))].sort();
+  populateMSOptions('tag', allTags.map(t => ({ value: t, label: t })));
+
   buildCategoryTypeDefaults(cats);
   renderCategoryTypeModal(cats);
 }
@@ -379,7 +435,10 @@ function applyFiltersAndRender() {
     if (excluded.month.size > 0 && excluded.month.has(String(r.monthNum))) return false;
     if (excluded.owner.size > 0 && excluded.owner.has(r.accountOwner))     return false;
     if (excluded.cat.size   > 0 && excluded.cat.has(r.category))           return false;
-    
+    // Tags: row passes if it has no tags, OR at least one tag is not excluded
+    if (excluded.tag.size > 0 && r.tags.length > 0) {
+      if (!r.tags.some(t => !excluded.tag.has(t))) return false;
+    }
     return true;
   });
   currentPage = 1;
@@ -387,6 +446,7 @@ function applyFiltersAndRender() {
   updateChartTitles();
   renderCharts();
   renderTable();
+  if (activeDrillCategory) renderSubcategoryDrill(activeDrillCategory);
 }
 
 // ─── DEMO / PUBLIC SHEETS LOADING ───────────────────────────────────────────
@@ -421,6 +481,9 @@ function parseCSV(text) {
 async function loadPublicData(sheetId, gids) {
   document.getElementById('auth-screen').style.display = 'none';
   document.getElementById('loading').style.display = 'block';
+  categoryMap    = {};
+  subcategoryMap = {};
+  await loadCategoryMap(sheetId);
   const combined = [];
   for (const gid of gids) {
     try {
@@ -432,14 +495,15 @@ async function loadPublicData(sheetId, gids) {
       if (!rows || rows.length < 2) continue;
       const headers = rows[0].map(h => h.trim().toLowerCase());
       const idx = {
-        date:         headers.indexOf('date'),
-        description:  headers.indexOf('description'),
-        amount:       headers.indexOf('amount'),
-        account:      headers.indexOf('account'),
-        category:     headers.indexOf('category'),
-        month:        headers.indexOf('month'),
-        accountOwner: headers.indexOf('account owner'),
-        notes:        headers.indexOf('notes'),
+        date:          headers.indexOf('date'),
+        description:   headers.indexOf('description'),
+        amount:        headers.indexOf('amount'),
+        account:       headers.indexOf('account'),
+        accountOwner:  headers.indexOf('account owner'),
+        notes:         headers.indexOf('notes'),
+        categoryId:    headers.indexOf('category_id'),
+        subcategoryId: headers.indexOf('subcategory_id'),
+        tags:          headers.indexOf('tags'),
       };
       for (let i = 1; i < rows.length; i++) {
         const r = rows[i];
@@ -451,17 +515,32 @@ async function loadPublicData(sheetId, gids) {
           ? new Date(`${parts[2]}-${parts[0].padStart(2,'0')}-${parts[1].padStart(2,'0')}`)
           : new Date(r[idx.date]);
         const year = dateObj && !isNaN(dateObj) ? dateObj.getFullYear() : null;
+
+        const rawCatId = idx.categoryId    >= 0 ? (r[idx.categoryId]    || '').trim() : '';
+        const rawSubId = idx.subcategoryId >= 0 ? (r[idx.subcategoryId] || '').trim() : '';
+        const rawTags  = idx.tags          >= 0 ? (r[idx.tags]          || '').trim() : '';
+        // No categoryMap in demo mode — raw id is used as display name directly
+        const category    = (rawCatId && categoryMap[rawCatId])
+          ? categoryMap[rawCatId] : (rawCatId || 'Uncategorized');
+        const subcategory = (rawCatId && rawSubId && subcategoryMap[`${rawCatId}::${rawSubId}`])
+          ? subcategoryMap[`${rawCatId}::${rawSubId}`] : (rawSubId || '');
+        const tags = rawTags ? rawTags.split(',').map(t => t.trim()).filter(Boolean) : [];
+
         combined.push({
-          date:         r[idx.date] || '',
+          date:          r[idx.date] || '',
           dateObj,
           year,
-          monthNum:     dateObj && !isNaN(dateObj) ? dateObj.getMonth() + 1 : null,
-          description:  r[idx.description] || '',
+          monthNum:      dateObj && !isNaN(dateObj) ? dateObj.getMonth() + 1 : null,
+          description:   idx.description  >= 0 ? (r[idx.description]  || '') : '',
           amount,
-          account:      idx.account >= 0      ? (r[idx.account] || '')      : '',
-          category:     idx.category >= 0     ? (r[idx.category] || 'Uncategorized') : 'Uncategorized',
-          accountOwner: idx.accountOwner >= 0 ? (r[idx.accountOwner] || '') : '',
-          notes:        idx.notes >= 0        ? (r[idx.notes] || '')        : '',
+          account:       idx.account      >= 0 ? (r[idx.account]      || '') : '',
+          accountOwner:  idx.accountOwner >= 0 ? (r[idx.accountOwner] || '') : '',
+          notes:         idx.notes        >= 0 ? (r[idx.notes]        || '') : '',
+          categoryId:    rawCatId,
+          category,
+          subcategoryId: rawSubId,
+          subcategory,
+          tags,
         });
       }
     } catch (e) {
@@ -473,6 +552,7 @@ async function loadPublicData(sheetId, gids) {
   document.getElementById('app').style.display = 'block';
   populateFilters();
   applyFiltersAndRender();
+  wireAppButtons();
 }
 
 // ─── KPIs ─────────────────────────────────────────────────────────────────────
@@ -626,6 +706,12 @@ function renderCategoryDonut() {
     type: 'doughnut',
     data: { labels: sorted.map(e => e[0]), datasets: [{ data: sorted.map(e => e[1]), backgroundColor: palette, borderWidth: 0 }] },
     options: { ...baseOpts(), layout: { padding: 8 },
+      onClick: (event, elements) => {
+        if (elements.length > 0) renderSubcategoryDrill(sorted[elements[0].index][0]);
+      },
+      onHover: (event, elements) => {
+        event.native.target.style.cursor = elements.length ? 'pointer' : 'default';
+      },
       plugins: { ...baseOpts().plugins,
         legend: { position: 'bottom', labels: { color: getChartThemeColors().legend, font: { size: 11 }, boxWidth: 12, padding: 10,
           generateLabels: chart => chart.data.labels.map((lbl, i) => ({
@@ -643,8 +729,45 @@ function renderCategoryBar() {
   charts['catbar'] = new Chart(document.getElementById('chart-category-bar'), {
     type: 'bar',
     data: { labels: sorted.map(e => e[0]), datasets: [{ data: sorted.map(e => e[1]), backgroundColor: PALETTE, borderRadius: 6 }] },
-    options: { ...baseOpts(), plugins: { ...baseOpts().plugins, legend: { display: false } },
+    options: { ...baseOpts(), 
+      onClick: (event, elements) => {
+        if (elements.length > 0) renderSubcategoryDrill(sorted[elements[0].index][0]);
+      },
+      onHover: (event, elements) => {
+        event.native.target.style.cursor = elements.length ? 'pointer' : 'default';
+      },
+      plugins: { ...baseOpts().plugins, legend: { display: false } },
       scales: { x: { ...axisStyle(), ticks: { ...tickStyle(), maxRotation: 35 } }, y: { ...axisStyle(), ticks: { ...tickStyle(), callback: v => '$' + v.toLocaleString() } } } }
+  });
+}
+
+function renderSubcategoryDrill(categoryName) {
+  activeDrillCategory = categoryName;
+  const card = document.getElementById('subcategory-drill-card');
+  document.getElementById('drill-title').textContent = `${categoryName} — Subcategory Breakdown`;
+  card.style.display = 'block';
+  card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+  destroyChart('subDrill');
+  const rows    = filteredData.filter(r => r.category === categoryName);
+  const grouped = Object.entries(groupBy(rows, r => r.subcategory || '(no subcategory)'))
+    .map(([sub, recs]) => [sub, -sumArr(recs)])
+    .sort((a, b) => b[1] - a[1]);
+
+  charts['subDrill'] = new Chart(document.getElementById('chart-subcategory-drill'), {
+    type: 'bar',
+    data: {
+      labels: grouped.map(e => e[0]),
+      datasets: [{ data: grouped.map(e => e[1]), backgroundColor: PALETTE, borderRadius: 6 }]
+    },
+    options: {
+      ...baseOpts(),
+      plugins: { ...baseOpts().plugins, legend: { display: false } },
+      scales: {
+        x: { ...axisStyle(), ticks: { ...tickStyle(), maxRotation: 35 } },
+        y: { ...axisStyle(), ticks: { ...tickStyle(), callback: v => '$' + v.toLocaleString() } }
+      }
+    }
   });
 }
 
@@ -704,7 +827,7 @@ function renderTable() {
   
   const q = document.getElementById('search-input').value.toLowerCase();
   const tableData = q
-    ? filteredData.filter(r => [r.description, r.category, r.notes].some(s => s && s.toLowerCase().includes(q)))
+    ? filteredData.filter(r => [r.description, r.category, r.subcategory, r.notes, ...(r.tags || [])].some(s => s && s.toLowerCase().includes(q)))
     : filteredData
   
   let data = [...tableData].sort((a, b) => {
@@ -724,6 +847,8 @@ function renderTable() {
       <td>${esc(r.description)}</td>
       <td class="amount-cell ${r.amount >= 0 ? 'is-positive' : 'is-negative'}">${fmt(r.amount)}</td>
       <td><span class="category-badge">${esc(r.category)}</span></td>
+      <td style="color:var(--muted);font-size:0.82rem">${esc(r.subcategory)}</td>
+      <td>${(r.tags||[]).map(t => `<span class="tag-badge">${esc(t)}</span>`).join('')}</td>
       <td>${esc(r.account)}</td>
       <td>${esc(r.accountOwner)}</td>
       <td style="color:var(--muted);font-size:0.8rem">${esc(r.notes)}</td>
@@ -811,14 +936,15 @@ function renderCategoryTypeModal(cats) {
 }
 
 // ─── UNIFIED MULTI-SELECT ENGINE ─────────────────────────────────────────────
-const excluded = { year: new Set(), month: new Set(), owner: new Set(), cat: new Set() };
+const excluded = { year: new Set(), month: new Set(), owner: new Set(), cat: new Set(), tag: new Set() };
 const MS_CONFIG = {
   year:  { label: 'All Years',      singular: 'Year'     },
   month: { label: 'All Months',     singular: 'Month'    },
   owner: { label: 'All Owners',     singular: 'Owner'    },
   cat:   { label: 'All Categories', singular: 'Category' },
+  tag:   { label: 'All Tags',       singular: 'Tag'      },
 };
-const MS_KEYS = ['year','month','owner','cat'];
+const MS_KEYS = ['year', 'month', 'owner', 'cat', 'tag'];
 
 function initAllMultiSelects() {
   MS_KEYS.forEach(key => {

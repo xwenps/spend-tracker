@@ -182,6 +182,17 @@
           <div id="cat-options"></div>
         </div>
       </div>
+      <div class="multi-select-wrapper" id="tag-wrapper">
+        <div class="multi-select-trigger" id="tag-trigger">All Tags</div>
+        <div class="multi-select-dropdown" id="tag-dropdown">
+          <input class="ms-search" id="tag-search" type="text" placeholder="Search…">
+          <div class="ms-actions">
+            <button class="ms-action-btn" data-ms="tag" data-action="all">Select all</button>
+            <button class="ms-action-btn" data-ms="tag" data-action="clear">Clear all</button>
+          </div>
+          <div id="tag-options"></div>
+        </div>
+      </div>
   </div>
 
   <!-- KPIs -->
@@ -262,6 +273,15 @@
       <h3>Top Expense Categories</h3>
       <div class="chart-wrap"><canvas id="chart-category-bar"></canvas></div>
     </div>
+    <div class="chart-card chart-full" id="subcategory-drill-card" style="display:none">
+      <div class="drill-header">
+        <h3 id="drill-title">Subcategory Breakdown</h3>
+        <button class="modal-close" id="drill-close">✕</button>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="chart-subcategory-drill"></canvas>
+      </div>
+    </div>
     <div class="chart-card chart-full">
       <h3 id="title-category-period">Categorized Expenses by Period</h3>
       <div class="chart-wrap-tall"><canvas id="chart-category-period"></canvas></div>
@@ -281,6 +301,8 @@
           <th data-col="description">Description &#x21D5;</th>
           <th data-col="amount">Amount &#x21D5;</th>
           <th data-col="category">Category &#x21D5;</th>
+          <th data-col="subcategory">Subcategory ⇕</th>
+          <th>Tags</th>
           <th data-col="account">Account &#x21D5;</th>
           <th data-col="accountOwner">Owner &#x21D5;</th>
           <th data-col="notes">Notes</th>
