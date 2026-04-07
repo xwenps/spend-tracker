@@ -115,6 +115,7 @@ let sortCol = 'date';
 let sortDir = 'desc';
 let currentPage = 1;
 const PAGE_SIZE = 25;
+const MAX_DAILY_CT = 200;
 let charts = {};
 let categoryMap = {};
 let subcategoryMap = {}; 
@@ -244,6 +245,10 @@ function wireAppButtons() {
   document.getElementById('freq-toggle').addEventListener('click', e => {
     const btn = e.target.closest('.freq-btn');
     if (!btn) return;
+    if (btn.dataset.freq === 'daily' && filteredData.length > MAX_DAILY_CT) {
+      showToast(`Too many transactions for daily view (${filteredData.length} > ${MAX_DAILY_CT})`);
+      return;
+    }
     chartFreq = btn.dataset.freq;
     document.querySelectorAll('.freq-btn').forEach(b => b.classList.toggle('active', b === btn));
     updateChartTitles();
@@ -446,6 +451,13 @@ function applyFiltersAndRender() {
     }
     return true;
   });
+  if (chartFreq === 'daily' && filteredData.length > MAX_DAILY_CT) {
+    chartFreq = 'monthly';
+    document.querySelectorAll('.freq-btn').forEach(b =>
+      b.classList.toggle('active', b.dataset.freq === 'monthly')
+    );
+    showToast(`Too many transactions for daily view — switched to Monthly`);
+  }
   currentPage = 1;
   renderKPIs();
   updateChartTitles();
@@ -983,6 +995,23 @@ function sumArr(arr) {
 }
 function esc(s) {
   return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function showToast(msg, durationMs = 2800) {
+  // Remove any existing toast first
+  const existing = document.getElementById('app-toast');
+  if (existing) existing.remove();
+
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.id = 'app-toast';
+  el.textContent = msg;
+  document.body.appendChild(el);
+
+  setTimeout(() => {
+    el.classList.add('toast-hiding');
+    el.addEventListener('transitionend', () => el.remove(), { once: true });
+  }, durationMs);
 }
 
 // ─── CATEGORY TYPE MAPPING ────────────────────────────────────────────────────
