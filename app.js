@@ -124,6 +124,10 @@ let selectedTags = new Set();
 let tagFilterMode = 'AND'; // 'AND' | 'OR'
 let defaultExcludedCatIds = new Set();
 
+// FOR DEMO
+const DEMO_SHEET_ID = '1Ub6uzHLCIEj7f4zMVY96VhFcR3gRoz9xt9j8hp86oLk';
+const DEMO_GIDS     = ['0', '1978512565', '1772222274'];
+
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const PALETTE = [
   '#6c63ff','#ff6584','#43e97b','#f7971e','#38f9d7','#fa709a',
@@ -135,53 +139,33 @@ window.addEventListener('load', async () => {
   initTheme();
   await loadConfig();
 
-  // ── Restore existing session ──────────────────────────────────
-  const savedToken   = sessionStorage.getItem('gapi_access_token');
+  // Restore authenticated session
+  const savedToken  = sessionStorage.getItem('gapi_access_token');
   const savedSheetId = sessionStorage.getItem('gapi_sheet_id');
+  const isDemo      = sessionStorage.getItem('gapi_is_demo') === 'true';
+
+  // FOR DEMO
+  if (isDemo && savedSheetId) {
+    setUserMenu({ name: 'Demo User', email: 'demo mode', picture: null });
+    document.getElementById('auth-screen').style.display = 'none';
+    document.getElementById('loading').style.display = 'block';
+    await loadData(savedSheetId, null);
+    return;
+  }
+
   if (savedToken && savedSheetId) {
     accessToken = savedToken;
     document.getElementById('auth-screen').style.display = 'none';
-    document.getElementById('loading').style.display   = 'block';
+    document.getElementById('loading').style.display = 'block';
     const cachedProfile = sessionStorage.getItem('gapi_user_profile');
-    if (cachedProfile) {
-      setUserMenu(JSON.parse(cachedProfile));
-    } else {
-      await fetchUserProfile(savedToken);
-    }
-    await loadAllData(savedSheetId);
-    return; 
+    if (cachedProfile) setUserMenu(JSON.parse(cachedProfile));
+    else await fetchUserProfile(savedToken);
+    await loadData(savedSheetId, savedToken);
+    return;
   }
 
-  // ── No session — show sign-in as normal ───────────────────────
+  // No session — show sign-in
   document.getElementById('signin-btn').addEventListener('click', startSignIn);
-  // Demo Mode button wiring
-  const demoBtn = document.getElementById('demo-mode-btn');
-  const demoOverlay = document.getElementById('demo-overlay');
-  const demoClose = document.getElementById('demo-close');
-  const demoCancel = document.getElementById('demo-cancel');
-  const demoLoad = document.getElementById('demo-load-btn');
-  const demoSheetInput = document.getElementById('demo-sheet-id');
-  const demoGidsInput = document.getElementById('demo-gids');
-  // if (demoBtn) demoBtn.addEventListener('click', (e) => {
-  //   e.stopPropagation();
-  //   // Prefill public demo values
-  //   if (demoSheetInput) demoSheetInput.value = '1Ub6uzHLCIEj7f4zMVY96VhFcR3gRoz9xt9j8hp86oLk';
-  //   if (demoGidsInput) demoGidsInput.value = '0,1978512565';
-  //   if (demoOverlay) demoOverlay.style.display = 'block';
-  //   if (demoSheetInput) demoSheetInput.focus();
-  // });
-  if (demoClose) demoClose.addEventListener('click', () => demoOverlay.style.display = 'none');
-  if (demoCancel) demoCancel.addEventListener('click', () => demoOverlay.style.display = 'none');
-  if (demoOverlay) demoOverlay.addEventListener('click', (e) => { if (e.target === demoOverlay) demoOverlay.style.display = 'none'; });
-  if (demoLoad) demoBtn.addEventListener('click', async () => {
-    // const sid = (demoSheetInput && demoSheetInput.value || '').trim();
-    // const gids = (demoGidsInput && demoGidsInput.value || '').split(',').map(s => s.trim()).filter(Boolean);
-    // if (!sid || gids.length === 0) { alert('Please enter sheet ID and at least one gid'); return; }
-    const sid = '1Ub6uzHLCIEj7f4zMVY96VhFcR3gRoz9xt9j8hp86oLk';
-    const gids = ['0', '1978512565'];
-    demoOverlay.style.display = 'none';
-    await loadPublicData(sid, gids);
-  });
   const settingsToggle = document.getElementById('manual-settings-toggle');
   const settingsPanel  = document.getElementById('manual-settings-panel');
   if (settingsToggle) {
@@ -190,6 +174,14 @@ window.addEventListener('load', async () => {
       settingsToggle.textContent = isOpen ? '✕ hide setup' : '⚙ manual setup';
     });
   }
+
+  const demoBtn = document.getElementById('demo-mode-btn');
+  if (demoBtn) demoBtn.addEventListener('click', async () => {
+    sessionStorage.setItem('gapi_is_demo', 'true');
+    sessionStorage.setItem('gapi_sheet_id', DEMO_SHEET_ID);
+    setUserMenu({ name: 'Demo User', email: 'demo mode', picture: null });
+    await loadData(DEMO_SHEET_ID, null);
+  });
 });
 
 // ─── AUTH ─────────────────────────────────────────────────────────────────────
@@ -215,7 +207,7 @@ function startSignIn() {
       sessionStorage.setItem('gapi_access_token', resp.access_token);
       sessionStorage.setItem('gapi_sheet_id', sheetId);
       fetchUserProfile(accessToken);
-      await loadAllData(sheetId);
+      await loadData(sheetId, accessToken);
     }
   });
   tokenClient.requestAccessToken({ prompt: 'consent' });
@@ -227,7 +219,7 @@ function showAuthError(msg) {
   el.style.display = 'block';
 }
 
-// ─── DATA FETCHING ────────────────────────────────────────────────────────────
+// ─── BUTTON WIRING ────────────────────────────────────────────────────────────
 let appButtonsWired = false;
 
 function wireAppButtons() {
@@ -264,23 +256,29 @@ function wireAppButtons() {
   });
   document.getElementById('refresh-btn').addEventListener('click', () => {
     const sheetId = sessionStorage.getItem('gapi_sheet_id');
-    if (sheetId && accessToken) loadAllData(sheetId);
+    const isDemo  = sessionStorage.getItem('gapi_is_demo') === 'true';
+    if (!sheetId) return;
+    if (isDemo) loadData(sheetId, null);
+    else if (accessToken) loadData(sheetId, accessToken);
   });
   document.getElementById('signout-btn').addEventListener('click', () => {
-    sessionStorage.removeItem('gapi_access_token');
-    sessionStorage.removeItem('gapi_sheet_id');
-    sessionStorage.removeItem('gapi_user_profile');
-    location.reload();
-  });
+  sessionStorage.removeItem('gapi_access_token');
+  sessionStorage.removeItem('gapi_sheet_id');
+  sessionStorage.removeItem('gapi_user_profile');
+  sessionStorage.removeItem('gapi_is_demo');
+  location.reload();
+});
 }
 
-async function discoverSheetTabs(sheetId) {
+// ─── DATA FETCHING ────────────────────────────────────────────────────────────
+async function discoverSheetTabs(sheetId, token) {
+  const headers = token ? { Authorization: `Bearer ${token}` } : {};
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}?fields=sheets.properties.title`;
-  const res  = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
+  const res  = await fetch(url, { headers });
 
   if (!res.ok) {
     // Token likely expired — clear session and force re-login
-    if (res.status === 401) {
+    if (res.status === 401 && token) {
       sessionStorage.removeItem('gapi_access_token');
       sessionStorage.removeItem('gapi_sheet_id');
       sessionStorage.removeItem('gapi_user_profile');
@@ -294,16 +292,17 @@ async function discoverSheetTabs(sheetId) {
   return json.sheets.map(s => s.properties.title);
 }
 
-async function loadCategoryMap(sheetId) {
+async function loadCategoryMap(sheetId, token) {
   try {
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
     const range = encodeURIComponent('CONFIG.categories!A:Z');
     const url   = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${range}`;
-    const res   = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
+    const res   = await fetch(url, { headers });
     if (!res.ok) return;
     const rows  = (await res.json()).values;
     if (!rows || rows.length < 2) return;
-    const headers = rows[0].map(h => h.trim().toLowerCase());
-    const col = name => headers.indexOf(name);
+    const headers_ = rows[0].map(h => h.trim().toLowerCase());
+    const col = name => headers_.indexOf(name);
     if (col('category_id') === -1) return;
     rows.slice(1).forEach(r => {
       const catId   = (r[col('category_id')]      || '').trim();
@@ -319,16 +318,17 @@ async function loadCategoryMap(sheetId) {
   }
 }
 
-async function loadDefaultExcludes(sheetId) {
+async function loadDefaultExcludes(sheetId, token) {
   try {
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
     const range = encodeURIComponent('CONFIG.default.exclude!A:Z');
     const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${range}`;
-    const res = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
+    const res = await fetch(url, { headers });
     if (!res.ok) return; // tab doesn't exist or no access — silently skip
     const rows = (await res.json()).values;
     if (!rows || rows.length < 2) return;
-    const headers = rows[0].map(h => h.trim().toLowerCase());
-    const catIdCol = headers.indexOf('category_id');
+    const headers_ = rows[0].map(h => h.trim().toLowerCase());
+    const catIdCol = headers_.indexOf('category_id');
     if (catIdCol === -1) return;
     rows.slice(1).forEach(r => {
       const id = (r[catIdCol] || '').trim();
@@ -340,96 +340,29 @@ async function loadDefaultExcludes(sheetId) {
   }
 }
 
-async function loadAllData(sheetId) {
+async function loadData(sheetId, token = null) {
   document.getElementById('auth-screen').style.display = 'none';
   document.getElementById('loading').style.display = 'block';
-
-  categoryMap    = {};
-  subcategoryMap = {};
+  categoryMap         = {};
+  subcategoryMap      = {};
   defaultExcludedCatIds = new Set();
 
-  await loadCategoryMap(sheetId);
-  await loadDefaultExcludes(sheetId);
+  if (token) {
+    // ── Authenticated mode: full Sheets API ─────────────────────
+    await loadCategoryMap(sheetId, token);
+    await loadDefaultExcludes(sheetId, token);
+    const allTabs   = await discoverSheetTabs(sheetId, token); // ← Bug 1 fix
+    const sheetTabs = CONFIG.sheetTabs ?? allTabs.filter(name => /^\d{4}$/.test(name));
+    const results   = await Promise.all(sheetTabs.map(tab => fetchTabViaAPI(sheetId, tab, token)));
+    allData = results.flat().sort((a, b) => (b.dateObj || 0) - (a.dateObj || 0));
 
-  // Get Data from either Config File or only tabs named as 4-digit years only (e.g. "2020", "2021", etc.)
-  const allTabs = await discoverSheetTabs(sheetId);
-  const sheetTabs = CONFIG.sheetTabs 
-    ?? allTabs.filter(name => /^\d{4}$/.test(name));
+  } else {
+    // ── Demo mode: public CSV endpoint (no auth required) ────────
+    const gids   = CONFIG.demoGids ?? DEMO_GIDS;
+    const results = await Promise.all(gids.map(gid => fetchTabViaCSV(sheetId, gid)));
+    allData = results.flat().sort((a, b) => (b.dateObj || 0) - (a.dateObj || 0));
+  }
 
-  const results = await Promise.all(
-    sheetTabs.map(async tab => {
-      try {
-        const range = encodeURIComponent(`${tab}!A:Z`);
-        const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${range}`;
-        const res = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
-        console.log(`Tab "${tab}" → HTTP ${res.status}`);
-        if (!res.ok) return [];
-        const json = await res.json();
-        const rows = json.values;
-        console.log(`Tab "${tab}" → rows:`, rows?.length);
-        if (!rows || rows.length < 2) return [];
-
-        const headers = rows[0].map(h => h.trim().toLowerCase());
-        console.log(`Tab "${tab}" → headers:`, headers);
-        const idx = {
-          date:          headers.indexOf('date'),
-          description:   headers.indexOf('description'),
-          amount:        headers.indexOf('amount'),
-          account:       headers.indexOf('account'),
-          accountOwner:  headers.indexOf('account owner'),
-          notes:         headers.indexOf('notes'),
-          categoryId:    headers.indexOf('category_id'),
-          subcategoryId: headers.indexOf('subcategory_id'),
-          tags:          headers.indexOf('tags'),
-        };
-
-        return rows.slice(1).flatMap(r => {
-          const amount = parseFloat((r[idx.amount] || '0').replace(/[$,]/g, ''));
-          if (!r[idx.date] || isNaN(amount) || amount === 0) return [];
-          const parts   = r[idx.date].split('/');
-          const dateObj = parts.length === 3
-            ? new Date(parseInt(parts[2]), parseInt(parts[0]) - 1, parseInt(parts[1]))
-            : null;
-
-          const rawCatId = idx.categoryId    >= 0 ? (r[idx.categoryId]    || '').trim() : '';
-          const rawSubId = idx.subcategoryId >= 0 ? (r[idx.subcategoryId] || '').trim() : '';
-          const rawTags  = idx.tags          >= 0 ? (r[idx.tags]          || '').trim() : '';
-
-          const category  = (rawCatId && categoryMap[rawCatId])
-            ? categoryMap[rawCatId] : (rawCatId || 'Uncategorized');
-          const subcategory = (rawCatId && rawSubId && subcategoryMap[`${rawCatId}::${rawSubId}`])
-            ? subcategoryMap[`${rawCatId}::${rawSubId}`] : (rawSubId || '');
-          const tags = rawTags ? rawTags.split(',').map(t => t.trim()).filter(Boolean) : [];
-
-          return [{
-            date:         r[idx.date]        || '',
-            dateObj,
-            year:         dateObj ? dateObj.getFullYear()  : null,
-            monthNum:     dateObj ? dateObj.getMonth() + 1 : null,
-            description:  idx.description  >= 0 ? (r[idx.description]  || '') : '',
-            amount,
-            account:      idx.account      >= 0 ? (r[idx.account]      || '') : '',
-            accountOwner: idx.accountOwner >= 0 ? (r[idx.accountOwner] || '') : '',
-            notes:        idx.notes        >= 0 ? (r[idx.notes]        || '') : '',
-            categoryId:   rawCatId,
-            category,         // display name — used everywhere existing code references r.category
-            subcategoryId: rawSubId,
-            subcategory,
-            tags,
-          }];
-        });
-
-      } catch (e) {
-        console.warn(`Could not load sheet tab "${tab}"`, e);
-        return [];
-      }
-    })
-  );
-  console.log('sheetTabs used:', sheetTabs);
-  console.log('results:', results);
-  console.log('allData after flat:', results.flat().length, 'rows');
-
-  allData = results.flat().sort((a, b) => (b.dateObj || 0) - (a.dateObj || 0));
   document.getElementById('loading').style.display = 'none';
   document.getElementById('app').style.display = 'block';
   populateFilters();
@@ -437,6 +370,105 @@ async function loadAllData(sheetId) {
   wireAppButtons();
 }
 
+// ─── DATA FETCHING HELPERS ───────────────────────────────────────────
+function parseCSV(text) {
+  const rows = [];
+  let cur = [];
+  let field = '';
+  let inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    const next = text[i+1];
+    if (ch === '"') {
+      if (inQuotes && next === '"') { field += '"'; i++; }
+      else inQuotes = !inQuotes;
+      continue;
+    }
+    if (ch === ',' && !inQuotes) {
+      cur.push(field); field = ''; continue;
+    }
+    if ((ch === '\n' || ch === '\r') && !inQuotes) {
+      if (field !== '' || cur.length > 0) { cur.push(field); rows.push(cur); cur = []; field = ''; }
+      if (ch === '\r' && next === '\n') i++;
+      continue;
+    }
+    field += ch;
+  }
+  if (field !== '' || cur.length > 0) { cur.push(field); rows.push(cur); }
+  return rows.map(r => r.map(c => c.trim()));
+}
+
+async function fetchTabViaAPI(sheetId, tab, token) {
+  try {
+    const range = encodeURIComponent(`${tab}!A:Z`);
+    const url   = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${range}`;
+    const res   = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) return [];
+    const rows = (await res.json()).values;
+    if (!rows || rows.length < 2) return [];
+    return parseRowsToRecords(rows);
+  } catch(e) {
+    console.warn(`Could not load tab "${tab}":`, e);
+    return [];
+  }
+}
+
+async function fetchTabViaCSV(sheetId, gid) {
+  try {
+    const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&gid=${encodeURIComponent(gid)}`;
+    const res = await fetch(url);
+    if (!res.ok) { console.warn('Failed to fetch gid', gid); return []; }
+    const rows = parseCSV(await res.text());
+    if (!rows || rows.length < 2) return [];
+    return parseRowsToRecords(rows);
+  } catch(e) {
+    console.warn(`Could not load public gid ${gid}:`, e);
+    return [];
+  }
+}
+
+function parseRowsToRecords(rows) {
+  const headers = rows[0].map(h => h.trim().toLowerCase());
+  const idx = {
+    date:        headers.indexOf('date'),
+    description: headers.indexOf('description'),
+    amount:      headers.indexOf('amount'),
+    account:     headers.indexOf('account'),
+    accountOwner:headers.indexOf('account owner'),
+    notes:       headers.indexOf('notes'),
+    categoryId:  headers.indexOf('category_id'),
+    subcategoryId:headers.indexOf('subcategory_id'),
+    tags:        headers.indexOf('tags'),
+  };
+  return rows.slice(1).flatMap(r => {
+    const amount = parseFloat((r[idx.amount] || '0').replace(/[$,]/g, ''));
+    if (!r[idx.date] || isNaN(amount) || amount === 0) return [];
+    const parts   = r[idx.date].split('/');
+    const dateObj = parts.length === 3
+      ? new Date(parseInt(parts[2]), parseInt(parts[0]) - 1, parseInt(parts[1]))
+      : new Date(r[idx.date]);
+    const rawCatId = idx.categoryId  >= 0 ? (r[idx.categoryId]  || '').trim() : '';
+    const rawSubId = idx.subcategoryId >= 0 ? (r[idx.subcategoryId] || '').trim() : '';
+    const rawTags  = idx.tags >= 0 ? (r[idx.tags] || '').trim() : '';
+    const category    = (rawCatId && categoryMap[rawCatId]) ? categoryMap[rawCatId] : (rawCatId || 'Uncategorized');
+    const subcategory = (rawCatId && rawSubId && subcategoryMap[`${rawCatId}::${rawSubId}`])
+      ? subcategoryMap[`${rawCatId}::${rawSubId}`] : (rawSubId || '');
+    const tags = rawTags ? rawTags.split(',').map(t => t.trim()).filter(Boolean) : [];
+    return [{
+      date: r[idx.date] || '', dateObj,
+      year:     dateObj && !isNaN(dateObj) ? dateObj.getFullYear() : null,
+      monthNum: dateObj && !isNaN(dateObj) ? dateObj.getMonth() + 1 : null,
+      description:  idx.description  >= 0 ? (r[idx.description]  || '') : '',
+      amount,
+      account:      idx.account      >= 0 ? (r[idx.account]      || '') : '',
+      accountOwner: idx.accountOwner >= 0 ? (r[idx.accountOwner] || '') : '',
+      notes:        idx.notes        >= 0 ? (r[idx.notes]        || '') : '',
+      categoryId: rawCatId, category,
+      subcategoryId: rawSubId, subcategory,
+      tags,
+    }];
+  });
+}
 
 // ─── FILTERS ──────────────────────────────────────────────────────────────────
 function populateFilters() {
@@ -496,112 +528,6 @@ function applyFiltersAndRender() {
   }));
 }
 
-// ─── DEMO / PUBLIC SHEETS LOADING ───────────────────────────────────────────
-// Parse CSV text into array of rows (handles quoted fields)
-function parseCSV(text) {
-  const rows = [];
-  let cur = [];
-  let field = '';
-  let inQuotes = false;
-  for (let i = 0; i < text.length; i++) {
-    const ch = text[i];
-    const next = text[i+1];
-    if (ch === '"') {
-      if (inQuotes && next === '"') { field += '"'; i++; }
-      else inQuotes = !inQuotes;
-      continue;
-    }
-    if (ch === ',' && !inQuotes) {
-      cur.push(field); field = ''; continue;
-    }
-    if ((ch === '\n' || ch === '\r') && !inQuotes) {
-      if (field !== '' || cur.length > 0) { cur.push(field); rows.push(cur); cur = []; field = ''; }
-      if (ch === '\r' && next === '\n') i++;
-      continue;
-    }
-    field += ch;
-  }
-  if (field !== '' || cur.length > 0) { cur.push(field); rows.push(cur); }
-  return rows.map(r => r.map(c => c.trim()));
-}
-
-async function loadPublicData(sheetId, gids) {
-  document.getElementById('auth-screen').style.display = 'none';
-  document.getElementById('loading').style.display = 'block';
-  categoryMap    = {};
-  subcategoryMap = {};
-  await loadCategoryMap(sheetId);
-  const combined = [];
-  for (const gid of gids) {
-    try {
-      const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&gid=${encodeURIComponent(gid)}`;
-      const res = await fetch(url);
-      if (!res.ok) { console.warn('Failed to fetch gid', gid); continue; }
-      const text = await res.text();
-      const rows = parseCSV(text);
-      if (!rows || rows.length < 2) continue;
-      const headers = rows[0].map(h => h.trim().toLowerCase());
-      const idx = {
-        date:          headers.indexOf('date'),
-        description:   headers.indexOf('description'),
-        amount:        headers.indexOf('amount'),
-        account:       headers.indexOf('account'),
-        accountOwner:  headers.indexOf('account owner'),
-        notes:         headers.indexOf('notes'),
-        categoryId:    headers.indexOf('category_id'),
-        subcategoryId: headers.indexOf('subcategory_id'),
-        tags:          headers.indexOf('tags'),
-      };
-      for (let i = 1; i < rows.length; i++) {
-        const r = rows[i];
-        const rawAmt = (r[idx.amount] || '0').replace(/[$,]/g, '');
-        const amount = parseFloat(rawAmt);
-        if (!r[idx.date] || isNaN(amount) || amount === 0) continue;
-        const parts = (r[idx.date] || '').split('/');
-        const dateObj = parts.length === 3
-          ? new Date(`${parts[2]}-${parts[0].padStart(2,'0')}-${parts[1].padStart(2,'0')}`)
-          : new Date(r[idx.date]);
-        const year = dateObj && !isNaN(dateObj) ? dateObj.getFullYear() : null;
-
-        const rawCatId = idx.categoryId    >= 0 ? (r[idx.categoryId]    || '').trim() : '';
-        const rawSubId = idx.subcategoryId >= 0 ? (r[idx.subcategoryId] || '').trim() : '';
-        const rawTags  = idx.tags          >= 0 ? (r[idx.tags]          || '').trim() : '';
-        // No categoryMap in demo mode — raw id is used as display name directly
-        const category    = (rawCatId && categoryMap[rawCatId])
-          ? categoryMap[rawCatId] : (rawCatId || 'Uncategorized');
-        const subcategory = (rawCatId && rawSubId && subcategoryMap[`${rawCatId}::${rawSubId}`])
-          ? subcategoryMap[`${rawCatId}::${rawSubId}`] : (rawSubId || '');
-        const tags = rawTags ? rawTags.split(',').map(t => t.trim()).filter(Boolean) : [];
-
-        combined.push({
-          date:          r[idx.date] || '',
-          dateObj,
-          year,
-          monthNum:      dateObj && !isNaN(dateObj) ? dateObj.getMonth() + 1 : null,
-          description:   idx.description  >= 0 ? (r[idx.description]  || '') : '',
-          amount,
-          account:       idx.account      >= 0 ? (r[idx.account]      || '') : '',
-          accountOwner:  idx.accountOwner >= 0 ? (r[idx.accountOwner] || '') : '',
-          notes:         idx.notes        >= 0 ? (r[idx.notes]        || '') : '',
-          categoryId:    rawCatId,
-          category,
-          subcategoryId: rawSubId,
-          subcategory,
-          tags,
-        });
-      }
-    } catch (e) {
-      console.warn('Could not load public gid', gid, e);
-    }
-  }
-  allData = combined.sort((a,b) => (b.dateObj || 0) - (a.dateObj || 0));
-  document.getElementById('loading').style.display = 'none';
-  document.getElementById('app').style.display = 'block';
-  populateFilters();
-  applyFiltersAndRender();
-  wireAppButtons();
-}
-
 // ─── KPIs ─────────────────────────────────────────────────────────────────────
 function fmt(n) {
   return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -630,9 +556,8 @@ function renderKPIs() {
   document.getElementById('kpi-avg-month').textContent = fmt(-avgExpense);
   document.getElementById('kpi-avg-sub').textContent   = `over ${monthKeys.length} month${monthKeys.length !== 1 ? 's' : ''}`;
 
-  // Top expense category is "largest negative" number
   const catGroups = groupBy(expenseRows, r => r.category);
-  const topCat    = Object.entries(catGroups).sort((a,b) => sumArr(a[1]) - sumArr(b[1]))[0];
+  const topCat    = Object.entries(catGroups).sort((a,b) => sumArr(a[1]) - sumArr(b[1]))[0]; // Sort ascending since expenses are negative
   if (topCat) {
     document.getElementById('kpi-top-cat').textContent     = topCat[0];
     document.getElementById('kpi-top-cat-sub').textContent = fmt(-sumArr(topCat[1]));
@@ -835,7 +760,7 @@ function renderCategoryDonut() {
   destroyChart('donut');
   const rows   = filteredData.filter(r => (categoryTypes[r.category] || 'Expense') === 'Expense');
   const sorted = Object.entries(groupBy(rows, r => r.category))
-    .map(([cat, recs]) => [cat, -sumArr(recs)]).sort((a, b) => a[1] - b[1]);
+    .map(([cat, recs]) => [cat, -sumArr(recs)]).sort((a, b) => b[1] - a[1]);
   const palette = sorted.map((_, i) => PALETTE[i % PALETTE.length]);
   charts['donut'] = new Chart(document.getElementById('chart-category-donut'), {
     type: 'doughnut',

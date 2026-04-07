@@ -1,0 +1,136 @@
+{
+  "clientId": "",
+  "sheetId":  "",
+  "sheetTabs": null,
+  "options": {
+    "accounts": [
+      {"name": "John-CapitalOne", "owner": "John", "type": "Credit Card", "description": "Savor"},
+      {"name": "John-Checking", "owner": "John", "type": "Checking Account", "description": "Chase Checking"},
+      {"name": "John-Citi", "owner": "John", "type": "Credit Card", "description": "Citi Custom Cash"},
+      {"name": "Ellie-Costco", "owner": "Ellie", "type": "Credit Card", "description": "Cit Costco"},
+      {"name": "Ellie-Chase", "owner": "Ellie", "type": "Credit Card", "description": "Chase Freedom"},
+      {"name": "Ellie-Checking", "owner": "Ellie", "type": "Checking Account", "description": "Chase Checking"},
+      {"name": "Ellie-Amex", "owner": "Ellie", "type": "Credit Card", "description": "Amex Plat"}
+    ],
+    "categories": [
+      {
+        "id": "food_dining",
+        "name": "Food & Dining",
+        "subcategories": [
+          { "id": "groceries",          "name": "Groceries" },
+          { "id": "restaurants_cafes",  "name": "Restaurants & Cafes" }
+        ]
+      },
+      {
+        "id": "transportation",
+        "name": "Transportation",
+        "subcategories": [
+          { "id": "transit_rideshare",  "name": "Transit & Rideshare" },
+          { "id": "gas_parking_tolls",        "name": "Gas, Parking, & Tolls" },
+          { "id": "auto_maintenance",   "name": "Auto Maintenance" },
+          { "id": "airfare",   "name": "Airfare" }
+        ]
+      },
+      {
+        "id": "housing",
+        "name": "Housing",
+        "subcategories": [
+          { "id": "mortgage_rent",        "name": "Mortgage/Rent" },
+          { "id": "utilities",            "name": "Utilities" },
+          { "id": "maintenance_repairs",  "name": "Maintenance & Repairs" },
+          { "id": "airbnb_hotels",  "name": "Airbnb & Hotels" }
+        ]
+      },
+      {
+        "id": "health",
+        "name": "Health",
+        "subcategories": [
+          { "id": "medical_pharmacy",   "name": "Medical & Pharmacy" },
+          { "id": "fitness_wellness",   "name": "Fitness & Wellness" }
+        ]
+      },
+      {
+        "id": "shopping",
+        "name": "Shopping",
+        "subcategories": [
+          { "id": "clothing",         "name": "Clothing" },
+          { "id": "electronics",      "name": "Electronics" },
+          { "id": "household_goods",  "name": "Household Goods" },
+          { "id": "hobbies",            "name": "Hobbies" }
+        ]
+      },
+      {
+        "id": "entertainment",
+        "name": "Entertainment",
+        "subcategories": [
+          { "id": "subscriptions",      "name": "Subscriptions" },
+          { "id": "events_activities",  "name": "Events & Activities" }
+        ]
+      },
+      {
+        "id": "personal_care",
+        "name": "Personal Care",
+        "subcategories": []
+      },
+      {
+        "id": "pets",
+        "name": "Pets",
+        "subcategories": []
+      },
+      {
+        "id": "gifts_giving",
+        "name": "Gifts & Giving",
+        "subcategories": [
+          { "id": "personal",  "name": "Personal" },
+          { "id": "family",    "name": "Family" },
+          { "id": "charity",   "name": "Charity" }
+        ]
+      },
+      {
+        "id": "work",
+        "name": "Work",
+        "subcategories": [
+          { "id": "reimbursed",    "name": "Reimbursed" },
+          { "id": "unreimbursed",  "name": "Unreimbursed" }
+        ]
+      },
+      {
+        "id": "financial",
+        "name": "Financial",
+        "subcategories": [
+          { "id": "taxes",                "name": "Taxes" }
+        ]
+      },
+      {
+        "id": "investments_savings",
+        "name": "Investments",
+        "subcategories": []
+      },
+      {
+        "id": "income",
+        "name": "Income",
+        "subcategories": [
+          { "id": "salary",             "name": "Salary" },
+          { "id": "misc",               "name": "Misc" },
+          { "id": "uncommon_windfall",  "name": "Uncommon/Windfall" }
+        ]
+      },
+      {
+        "id": "vacation",
+        "name": "Vacation",
+        "subcategories": []
+      },
+      {
+        "id": "transfers",
+        "name": "Transfers",
+        "subcategories": []
+      },
+      {
+        "id": "large_purchases",
+        "name": "Large Purchases",
+        "subcategories": []
+      }
+    ]
+  }
+}
+
